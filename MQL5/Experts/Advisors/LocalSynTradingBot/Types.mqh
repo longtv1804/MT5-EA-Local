@@ -1,3 +1,9 @@
+	
+enum TerminalType {
+   eTERMINAL_TYPE_LOCAL = 0,
+   eTERMINAL_TYPE_REMOTE = 1
+};
+
 enum POSITION_TYPE
 {
    ePOSITION_TYPE_BUY = 0,
