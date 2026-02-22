@@ -32,8 +32,8 @@ public:
 					// update local terminal positions
 					if(result.retcode == TRADE_RETCODE_DONE)
 					{
-						PositionInfo posInfo;
-						FillPositionInfoFromTradeResult(posInfo, result);
+						iPosition posInfo;
+						FilliPositionFromTradeResult(posInfo, result);
 						m_pLocalTerminal.AddPosition(m_pLocalTerminal.m_OpenPositions, posInfo);
 					}
 				}
@@ -47,26 +47,6 @@ public:
 	*
 	***********************************************************************************/
 private:
-	string FILE_INPUT = "";
-	void InitFiles()
-	{
-		string server_name = AccountInfoString(ACCOUNT_SERVER);
-		string server_lower = StringToLower(server_name);
-
-		if(StringFind(server_lower, "exness") >= 0)
-		{
-			FILE_INPUT = "xm_data_exchange.txt";
-		}
-		else if(StringFind(server_lower, "xmglobal") >= 0)
-		{
-			FILE_INPUT = "ex_data_exchange.txt";
-		}
-		else
-		{
-			Print("Unknown broker: ", server_name);
-		}
-	}
-
 	string PollData()
 	{
 		if (FILE_INPUT == "")

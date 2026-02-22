@@ -1,62 +1,104 @@
-#include <Trade\PositionInfo.mqh>
 #include "Types.mqh"
+#include "Constanst.mqh"
+#include "Utils.mqh"
 
 class Terminal
 {
-	protected:
-		PositionInfo m_OpenPositions[];
+protected:
+	iPosition m_OpenPositions[];
 
-		Terminal() {}
-		~Terminal() {}
+	Terminal() {}
+	~Terminal() {}
 
-
-	void AddPosition(PositionInfo arr[], PositionInfo &info)
+	string FILE_OUTPUT;
+	string FILE_INPUT;
+	void InitFiles()
 	{
-		int size = ArraySize(arr);
-		ArrayResize(arr, size + 1);
-		arr[size] = info;
+		string server_name = AccountInfoString(ACCOUNT_SERVER);
+		StringToLower(server_name);
+
+		if(StringFind(server_name, "exness") >= 0)
+		{
+			FILE_OUTPUT = EXNESS_TO_XM_FILE;
+			FILE_INPUT = XM_TO_EXNESS_FILE;
+		}
+		else if(StringFind(server_name, "xmglobal") >= 0)
+		{
+			FILE_OUTPUT = XM_TO_EXNESS_FILE;
+			FILE_INPUT = EXNESS_TO_XM_FILE;
+		}
+		else
+		{
+			LOGE("Unknown broker: " + server_name);
+			FILE_OUTPUT = "";
+			FILE_INPUT = "";
+		}
 	}
 
-	void RemovePositionByTicket(PositionInfo arr[], ulong position_ticket)
+	void AddPosition(iPosition &info)
 	{
-		int size = ArraySize(arr);
+		int size = ArraySize(m_OpenPositions);
+		ArrayResize(m_OpenPositions, size + 1);
+		m_OpenPositions[size] = info;
+	}
+
+	void RemovePositionByTicket(ulong position_ticket)
+	{
+		int size = ArraySize(m_OpenPositions);
 		for(int i = 0; i < size; i++)
 		{
-			if(arr[i].position_ticket == position_ticket)
+			if(m_OpenPositions[i].position_ticket == position_ticket)
 			{
 				for(int j = i; j < size - 1; j++)
 				{
-					arr[j] = arr[j + 1];
+					m_OpenPositions[j] = m_OpenPositions[j + 1];
 				}
-				ArrayResize(arr, size - 1);
+				ArrayResize(m_OpenPositions, size - 1);
 				break;
 			}
 		}
 	}
 
-	void UpdatePosition(PositionInfo arr[], PositionInfo &info)
+	void UpdatePosition(iPosition &info)
 	{
-		int size = ArraySize(arr);
+		int size = ArraySize(m_OpenPositions);
 		for(int i = 0; i < size; i++)
 		{
-			if(arr[i].position_ticket == info.position_ticket)
+			if(m_OpenPositions[i].position_ticket == info.position_ticket)
 			{
-				arr[i] = info;
+				m_OpenPositions[i] = info;
 				break;
 			}
 		}
 	}
 
-	void GetPositionsByTicket( PositionInfo info[], ulong position_ticket)
+	iPosition GetPositionsByTicket(ulong position_ticket)
 	{
-		int size = ArraySize(g_OpenPositions);
-		for(int i = 0; i < size; i++)
+		int size = ArraySize(m_OpenPositions);
+		int idx = 0;
+		for(idx = 0; idx < size; idx++)
 		{
-			if(g_OpenPositions[i].position_ticket == position_ticket)
+			if(m_OpenPositions[idx].position_ticket == position_ticket)
 			{
-				info = g_OpenPositions[i];
 				break;
 			}
 		}
+		return m_OpenPositions[idx];
+	}
+
+	double GetVolume()
+	{
+		double sum = 0;
+		for (int i = 0; i < ArraySize(m_OpenPositions); i++)
+		{
+			sum += m_OpenPositions[i].volume;
+		}
+		return sum;
+	}
+
+public:
+	void init()
+	{
+		InitFiles();
 	}
 };

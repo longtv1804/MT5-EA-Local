@@ -1,6 +1,5 @@
 #include "Terminal.mqh"
 #include "TerminalApi.mqh"
-#include "RemoteTerminal.mqh"
 #include "Types.mqh"
 #include "Utils.mqh"
 
@@ -10,35 +9,11 @@ public:
 	LocalTerminal() {}
 	~LocalTerminal() {}
 
-	void init()
-	{
-		InitFiles();
-	}
-
 	/**********************************************************************************
 	*
 	*  send data to the remote terminal
 	*
 	***********************************************************************************/
-	string FILE_OUTPUT = "";
-	void InitFiles()
-	{
-		string server_name = AccountInfoString(ACCOUNT_SERVER);
-		string server_lower = StringToLower(server_name);
-
-		if(StringFind(server_lower, "exness") >= 0)
-		{
-			FILE_OUTPUT = "ex_data_exchange.txt";
-		}
-		else if(StringFind(server_lower, "xmglobal") >= 0)
-		{
-			FILE_OUTPUT = "xm_data_exchange.txt";
-		}
-		else
-		{
-			LOGE("Unknown broker: ", server_name);
-		}
-	}
 
 	void SendData(string jsonData)
 	{
@@ -65,8 +40,27 @@ public:
 							const MqlTradeRequest& request,
 							const MqlTradeResult& result)
 	{
+		LOGD("TRANS: " + EnumToString(trans.type));
 		if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
 		{
+			LOGD(ToString(trans));
+			LOGD(ToString(request));
+			LOGD(ToString(result));
+			
+			iPosition currPositions[];
+			DoGetAllPosition(currPositions);
+			if(ArraySize(currPositions) == 0)
+			{
+				LOGD("NOW Position: No opened positions");
+			}
+			else
+			{
+				for(int i = 0; i < ArraySize(currPositions); i++)
+				{
+					LOGD("NOW Position[" + IntegerToString(i) + "] " + ToString(currPositions[i]));
+				}
+			}
+
 			if(!HistoryDealSelect(trans.deal))
 				return;
 
@@ -74,7 +68,8 @@ public:
 
 			if(entry == DEAL_ENTRY_IN)
 			{
-				TradeInfo info;
+				iPosition info;
+				ZeroMemory(info);
 
 				info.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
 				info.deal_ticket     = trans.deal;
@@ -82,22 +77,22 @@ public:
 				info.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
 				info.price_open      = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
 				info.time_open       = (datetime)HistoryDealGetInteger(trans.deal, DEAL_TIME);
-				info.status          = "OPEN";
-				info.reason          = "OPEN";
+				info.status          = ePOSITION_STATUS_OPEN;
+				info.open_reason     = (ENUM_POSITION_REASON)HistoryDealGetInteger(trans.deal, DEAL_REASON);
 
 				if(PositionSelectByTicket(info.position_ticket))
 				{
 					info.position_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
 				}
 
-				AddTrade(info);
+				AddPosition(info);
 
-				Print(">>> NEW POSITION OPENED: ", info.position_ticket);
+				LOGD(">>> POSITION OPENED: " + ToString(info));
 			}
-
-			if(entry == DEAL_ENTRY_OUT)
+			else if(entry == DEAL_ENTRY_OUT)
 			{
-				TradeInfo info;
+				iPosition info;
+				ZeroMemory(info);
 
 				info.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
 				info.deal_ticket     = trans.deal;
@@ -105,20 +100,21 @@ public:
 				info.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
 				info.price_close     = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
 				info.time_close      = (datetime)HistoryDealGetInteger(trans.deal, DEAL_TIME);
-				info.status          = "CLOSED";
+				info.status          = ePOSITION_STATUS_CLOSED;
+				info.close_reason    = (EnumCloseReason)HistoryDealGetInteger(trans.deal, DEAL_REASON);
 
-				info.reason = HistoryDealGetInteger(trans.deal, DEAL_REASON);
+				AddPosition(info);
 
-				AddTrade(info);
-
-				Print(">>> POSITION CLOSED: ", info.position_ticket,
-					" | Reason: ", info.reason);
+				LOGD(">>> POSITION CLOSED: " + ToString(info));
+			}
+			else
+			{
+				LOGD(">>> POSITION CHANGED: ");
 			}
 		}
 	}
 
 	void OnLocal_PositionChange() {}
-
 
 	/**********************************************************************************
 	*

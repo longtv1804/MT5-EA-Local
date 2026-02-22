@@ -1,0 +1,28 @@
+1, code phần LocalTerminal                                                                 
+	1.1 test get Position                                                                  done
+	1.2 test OnLocal_OnTradeTransaction()                                                  done
+		+ tạo XM acc                                                                       
+		+ tạo EX acc                                                                       
+		+ kiểm tra đặt lệnh trên XM                                                        
+		+ kiểm tra việc cắt lệnh bên XM                                                    
+	1.3 test việc ghi file output                                                          
+	1.4 thiết kế command trao đổi giữa 2 termial                                           
+																						   
+2, code phần RemoteTerminal                                                                
+	2.1 test việc nhận input                                                               
+		+ bên XM/EX gửi output                                                             
+		+ kiểm tra bên còn lại xem nhận được data ko                                       
+	2.2 test phần đồng bộ dữ liệu giữa 2 bên                                               
+		+ XM đặt thêm lệnh -> gửi dữ liệu sang EX                                          
+		+ kiểm tra việc trigger OnRemote_PositionChange bên EX                             
+																						   
+3, xong -> test tổng hợp                                                                   
+	3.1 test đồng bộ lệnh khi                                                              
+		+ đặt thêm lệnh bằng tay, bằng điện thoại, bằng lệnh limit...                      
+		+ cắt lệnh bằng tay                                                                
+		+ cắt lệnh bằng SL, stopout                                                        
+	3.2 test việc cắt lệnh tự động                                                         
+		+ đặt lệnh đầy đủ 2 bên                                                            
+		+ kiểm tra việc cắt lệnh bằng tool khi một bên bị stopout                          
+																						   
+4, test bằng cách chạy lệnh thực tế.                                                       
