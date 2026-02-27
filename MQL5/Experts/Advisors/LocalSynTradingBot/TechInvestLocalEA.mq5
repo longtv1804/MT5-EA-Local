@@ -32,9 +32,10 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
 
 int OnInit()
 {
+   LOGD("");
    LOGD("*************** EA INIT ****************");
    g_MyTerminal.init();
-   g_RemoteTerminal.init();
+   //g_RemoteTerminal.init();
    EventSetTimer(1);
    return(INIT_SUCCEEDED);
 }
@@ -42,6 +43,7 @@ int OnInit()
 void OnDeinit(const int reason)
 {
    EventKillTimer();
+   g_MyTerminal.termniate();
    LOGD("*************** EA FINISH ***************");
 }
 

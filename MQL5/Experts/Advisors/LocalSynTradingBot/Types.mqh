@@ -1,8 +1,24 @@
 #include <Trade\Trade.mqh>
 
 enum EnumTerminalType {
-    eTERMINAL_TYPE_LOCAL = 0,
-    eTERMINAL_TYPE_REMOTE = 1
+    eTERMINAL_TYPE_UNKNOWN = 0,
+    eTERMINAL_TYPE_XM = 1,
+    eTERMINAL_TYPE_EXNESS = 2
+};
+
+enum EnumChangeType
+{
+    eCHANGE_TYPE_UNKNOWN = 0,
+    eCHANGE_TYPE_OTHER,
+    eCHANGE_TYPE_SL,
+};
+
+enum EnumCmdId
+{
+    eCMD_ON_SL = 1,
+    eCMD_ON_INIT,
+    eCMD_ON_UPDATE,
+    eCMD_UNKNOWN
 };
 
 enum EnumPositionStatus
@@ -10,14 +26,6 @@ enum EnumPositionStatus
     ePOSITION_STATUS_UNKNOWN = 0,    // default value, should not be used
     ePOSITION_STATUS_OPEN,
     ePOSITION_STATUS_CLOSED
-};
-
-enum EnumCloseReason
-{
-    eCLOSE_REASON_UNKNOWN = 0,
-    eCLOSE_REASON_SL,
-    eCLOSE_REASON_TP,
-    eCLOSE_REASON_CLIENT,
 };
 
 struct iPosition
@@ -34,5 +42,5 @@ struct iPosition
     datetime             time_open;
     datetime             time_close;
     ENUM_POSITION_REASON open_reason;
-    EnumCloseReason      close_reason;
+    ENUM_DEAL_REASON      close_reason;
 };

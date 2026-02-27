@@ -5,16 +5,21 @@
 		+ tạo EX acc                                                                       
 		+ kiểm tra đặt lệnh trên XM                                                        
 		+ kiểm tra việc cắt lệnh bên XM                                                    
-	1.3 test việc ghi file output                                                          
-	1.4 thiết kế command trao đổi giữa 2 termial                                           
+	1.3 test việc ghi file output                                                          done
+	1.4 thiết kế command trao đổi giữa 2 termial                                           done
 																						   
 2, code phần RemoteTerminal                                                                
-	2.1 test việc nhận input                                                               
+	2.1 test việc nhận input                                                               done
 		+ bên XM/EX gửi output                                                             
-		+ kiểm tra bên còn lại xem nhận được data ko                                       
+		+ kiểm tra bên còn lại xem nhận được data ko                                       done
 	2.2 test phần đồng bộ dữ liệu giữa 2 bên                                               
 		+ XM đặt thêm lệnh -> gửi dữ liệu sang EX                                          
-		+ kiểm tra việc trigger OnRemote_PositionChange bên EX                             
+		+ kiểm tra việc trigger OnRemote_PositionChange bên EX 
+	2.3 test tính chính xác của dữ liễu gửi đi
+		+ XM đặt lệnh -> gửi sang EX	-> kiểm tra dữ liệu bên EX:
+				ticket, time, volume, price
+		+ XM đặt SL -> đợi SL call -> kiểm tra bên EX:
+				ticket, time, volume, price, giá close, time close.
 																						   
 3, xong -> test tổng hợp                                                                   
 	3.1 test đồng bộ lệnh khi                                                              
