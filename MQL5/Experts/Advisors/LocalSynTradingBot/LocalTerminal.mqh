@@ -284,9 +284,9 @@ public:
 private:
     void OnRemote_StopOut(iPosition &curPositions[], iPosition &newPositions[], iPosition &closedPositions[])
     {
-        ulong newRemmoteVolume = GetTotalVolume(newPositions);
-        ulong closedRemoteVolume = GetTotalVolume(closedPositions);
-        ulong currentRemoteVolume = GetTotalVolume(curPositions);
+        double newRemmoteVolume = GetTotalVolume(newPositions);
+        double closedRemoteVolume = GetTotalVolume(closedPositions);
+        double currentRemoteVolume = GetTotalVolume(curPositions);
         if (newRemmoteVolume > 0)
         {
             LOGD("Abnormal case: newRemmoteVolume(" + (string)newRemmoteVolume + ") > 0 when stop out happens" );
@@ -300,8 +300,8 @@ private:
             return;
         }
 
-        ulong localVolume = GetTotalVolume(curLocalPositions);
-        LOGD(StringFormat("localVolume=%d | RemoteVolume=%d, newRemmoteVolume=%d, closedRemoteVolume=%d", localVolume, currentRemoteVolume, newRemmoteVolume, closedRemoteVolume));
+        double localVolume = GetTotalVolume(curLocalPositions);
+        LOGD(StringFormat("localVolume=%f | RemoteVolume=%f, newRemmoteVolume=%f, closedRemoteVolume=%f", localVolume, currentRemoteVolume, newRemmoteVolume, closedRemoteVolume));
 
         while (localVolume > currentRemoteVolume)
         {

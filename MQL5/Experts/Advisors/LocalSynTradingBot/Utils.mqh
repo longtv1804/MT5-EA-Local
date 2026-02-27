@@ -190,12 +190,12 @@ string GetJsonValue(const string &json, const string &key)
 	return Trim(StringSubstr(json, value_start, value_end - value_start));
 }
 
-ulong GetTotalVolume(iPosition &arr[])
+double GetTotalVolume(iPosition &arr[])
 {
-	ulong totalVolume = 0;
+	double totalVolume = 0;
 	for(int i = 0; i < ArraySize(arr); i++)
 	{
-		totalVolume += (ulong)(arr[i].volume); // volume is in lots
+		totalVolume += arr[i].volume; // volume is in lots
 	}
 	return totalVolume;
 }
