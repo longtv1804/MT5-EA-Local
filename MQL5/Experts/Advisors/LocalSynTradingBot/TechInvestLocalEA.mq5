@@ -9,6 +9,13 @@
 
 #include "LocalTerminal.mqh"
 #include "RemoteTerminal.mqh"
+#include "TpSlController.mqh"
+
+// ================= INPUT =================
+input double iEquity_Og = 1000.0;      // Original equity
+input double iPercent_SetTP = 70.0;    // % equity set TP
+input double iPercent_ClearTP = -30.0; // % equity clear TP
+input double iVal_TP = 0.0;            // TP (Only SELL)
 
 /**********************************************************************
 *
@@ -17,6 +24,7 @@
 ***********************************************************************/
 LocalTerminal g_MyTerminal;
 RemoteTerminal g_RemoteTerminal(&g_MyTerminal);
+//TpSLController g_TpSlController;
 
 /**********************************************************************
 *
@@ -36,6 +44,7 @@ int OnInit()
    LOGD("*************** EA INIT ****************");
    g_MyTerminal.init();
    //g_RemoteTerminal.init();
+   g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
    EventSetTimer(1);
    return(INIT_SUCCEEDED);
 }
@@ -55,4 +64,5 @@ void OnDeinit(const int reason)
 void OnTimer()
 {
    g_RemoteTerminal.DoPoll();
+   g_TpSlController.OnTick();
 }
