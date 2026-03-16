@@ -25,6 +25,22 @@ iPosition DoGetPosition(ulong position_ticket)
     return ins;
 }
 
+double GetTotalAliveVolume()
+{
+   double total_volume = 0.0;
+   int total = PositionsTotal();
+
+   for(int i = 0; i < total; i++)
+   {
+      if(PositionSelectByTicket(PositionGetTicket(i)))
+      {
+         double vol = PositionGetDouble(POSITION_VOLUME);
+         total_volume += vol;
+      }
+   }
+   return total_volume;
+}
+
 void DoGetAllPosition(iPosition &resArr[])
 {
     int total = PositionsTotal();
@@ -67,11 +83,21 @@ bool DoClosePosition(ulong position_ticket)
     return false;
 }
 
+bool DoClosePartialPosition(ulong position_ticket, double volume)
+{
+    if(PositionSelectByTicket(position_ticket))
+    {
+        CTrade trade;
+        return trade.PositionClosePartial(position_ticket, volume);
+    }
+    return false;
+}
+
 void DoEndAllPositions()
 {
     CTrade trade;
     int total = PositionsTotal();
-    for(int i = total - 1; i >= 0; i--)
+    for(int i = 0; i < total; i++)
     {
         ulong ticket = PositionGetTicket(i);
         trade.PositionClose(ticket);

@@ -141,18 +141,18 @@ public:
             bool isSameType = true;
             for (int i = 1; i < size; i++)
             {
-                bool isChecked = false;
+                bool hasDifference = false;
                 for (int j = 0; j < i; j++)
                 {
-                    if (positions[i].symbol == positions[j].symbol)
+                    if (positions[i].symbol != positions[j].symbol)
                     {
-                        isChecked = true;
+                        hasDifference = true;
                         break;
                     }
                 }
-                if (isChecked == false)
+                if (hasDifference == true)
                 {
-                    symbols += positions[i].symbol + " ";
+                    symbols += " " + positions[i].symbol;
                     isMultipleSymbols = true;
                 }
                 if (positions[0].position_type != positions[i].position_type)

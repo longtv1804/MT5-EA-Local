@@ -2,6 +2,7 @@
 
 class TpSLController
 {
+private:
     datetime last_check;
     CTrade trade;
     double sl_positive;
@@ -28,14 +29,23 @@ public:
         if (iVal_TP <= 0.0)
         {
             MessageBox(
-            "Error: TP price is not set correctly!\n"
-            "Please enter TP > 0 before running EA.",
-            "EquityTP_EA",
-            MB_ICONERROR);
+                "Error: Giá trị TP chưa được set!\n"
+                "Set lại giá trị iVal_TP > 0 để EA hoạt động đúng.\n",
+                "EquityTP_EA",
+                MB_ICONERROR);
             return INIT_FAILED;
         }
 
         int total_positions = PositionsTotal();
+        if (total_positions == 0)
+        {
+            MessageBox(
+                "Không có vị thế nào đang chạy\n,"
+                "Hãy vào lại lệnh và reset EA!!",
+                "EA Warning", MB_ICONERROR);
+            return INIT_FAILED;
+        }
+
         double highest_open = 0.0;
         for (int i = 0; i < total_positions; i++)
         {
@@ -78,11 +88,8 @@ public:
         int total_positions = PositionsTotal();
 
         // ================= NO POSITION =================
-        if (total_positions == 0)
+        if (total_positions == 0 ||  iVal_TP <= 0.0)
         {
-            MessageBox("Do not exist ticket. Close EA!!!",
-            "EA Warning", MB_ICONERROR);
-            ExpertRemove();
             return;
         }
 

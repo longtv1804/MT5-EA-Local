@@ -12,6 +12,9 @@
 #include "TpSlController.mqh"
 
 // ================= INPUT =================
+input bool i_FEATURE_AUTO_PLACE_REMOVE_TP = true;     // tool của sangtv
+input bool i_FEATURE_AUTO_TP = true;     // tool auto TP khi mà SL.
+
 input double iEquity_Og = 1000.0;      // Original equity
 input double iPercent_SetTP = 70.0;    // % equity set TP
 input double iPercent_ClearTP = -30.0; // % equity clear TP
@@ -24,7 +27,7 @@ input double iVal_TP = 0.0;            // TP (Only SELL)
 ***********************************************************************/
 LocalTerminal g_MyTerminal;
 RemoteTerminal g_RemoteTerminal(&g_MyTerminal);
-//TpSLController g_TpSlController;
+TpSLController g_TpSlController;
 
 /**********************************************************************
 *
@@ -35,16 +38,26 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
                         const MqlTradeRequest& request,
                         const MqlTradeResult& result)
 {
-   g_MyTerminal.OnLocal_OnTradeTransaction(trans, request, result);
+   if (i_FEATURE_AUTO_TP)
+   {
+      g_MyTerminal.OnLocal_OnTradeTransaction_Solution2(trans, request, result);
+   }
 }
 
 int OnInit()
 {
    LOGD("");
    LOGD("*************** EA INIT ****************");
-   g_MyTerminal.init();
-   //g_RemoteTerminal.init();
-   g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
+
+   if (i_FEATURE_AUTO_TP)
+   {
+      g_MyTerminal.init();
+   }
+   if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
+         && CommonDatacenter::sLOCAL_TERMINAL_TYPE == eTERMINAL_TYPE_XM)
+   {
+      g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
+   }
    EventSetTimer(1);
    return(INIT_SUCCEEDED);
 }
@@ -56,13 +69,15 @@ void OnDeinit(const int reason)
    LOGD("*************** EA FINISH ***************");
 }
 
-// void OnTick()
-// {
-
-// }
-
 void OnTimer()
 {
-   g_RemoteTerminal.DoPoll();
-   g_TpSlController.OnTick();
+   if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
+         && CommonDatacenter::sLOCAL_TERMINAL_TYPE== eTERMINAL_TYPE_XM)
+   {
+      g_TpSlController.OnTick();
+   }
+   if (i_FEATURE_AUTO_TP)
+   {
+      g_RemoteTerminal.DoPoll();
+   }
 }

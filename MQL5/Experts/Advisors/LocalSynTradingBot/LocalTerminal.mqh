@@ -6,8 +6,16 @@
 
 class LocalTerminal
 {
+private:
+    // chỉ lưu các lệnh TP và các lệnh close do EA.
+    double m_closedVolumeByTP;
+    double m_closedVolumeBySLSO;
+
 public:
-    LocalTerminal() {}
+    LocalTerminal() 
+    : m_closedVolumeByTP(0.0), 
+    m_closedVolumeBySLSO(0.0) {}
+
     ~LocalTerminal() {}
 
     void init()
@@ -15,11 +23,15 @@ public:
         InitFiles();
         
         // send init data to remote terminal
-        EnumCmdId cmd = eCMD_ON_INIT;
-        iPosition currPositions[];
-        DoGetAllPosition(currPositions);
-        string jsonData = PackJson(cmd, currPositions);
-        SendData(jsonData);
+        EnumCmdId cmd = eCMD_DO_CONNECTING;
+        string jsonData = "{}";
+        SendData(PackJson(cmd, jsonData));
+    }
+
+    void DoReConnecting()
+    {
+        LOGD("==== Do Re-Connecting... ====");
+        init();
     }
 
     void termniate()
@@ -104,6 +116,11 @@ public:
         jsonData += "]}";
         return jsonData;
     }
+    static string PackJson(EnumCmdId cmdId, string jsonData)
+    {
+        jsonData = "{\"cmd\":" + IntegerToString(cmdId) + ",\"cmd_data\":" + jsonData + "}";
+        return jsonData;
+    }
     void SendData(string jsonData)
     {
         if (CommonDatacenter::sFILE_OUTPUT == "")
@@ -127,12 +144,17 @@ public:
     }
 
     /**********************************************************************************
-    *
-    *  OnLocal fucntions
-    *        trigger when there some thing change in the local terminal
-    *
+    *   SOLUTION 1: start
+    *   EA -> OnLocal_OnTradeTransaction_Solution1()
+    *   Remote terminal -> OnRemote_PositionChange__Solution1()
+    *   Logics:
+    *       local change -> send current position data to remote terminal
+    *       remote change -> receive data from remote terminal, 
+    *                        then compare with current local position to decide which position is changed, 
+    *                        then send changed position data to remote terminal
     ***********************************************************************************/
-    void OnLocal_OnTradeTransaction(const MqlTradeTransaction& trans,
+public:
+    void OnLocal_OnTradeTransaction_Solution1(const MqlTradeTransaction& trans,
                             const MqlTradeRequest& request,
                             const MqlTradeResult& result)
     {
@@ -185,7 +207,7 @@ public:
                     LOGD(">>> POSITION OPENED: " + ToString(currPositions[idx]));
                 }
 
-                OnLocal_PositionChange(eCHANGE_TYPE_OTHER, currPositions);
+                OnLocal_PositionChange_Solution1(eCHANGE_TYPE_OTHER, currPositions);
             }
             else if(entry == DEAL_ENTRY_OUT)
             {
@@ -207,11 +229,11 @@ public:
                 if (info.close_reason == ENUM_DEAL_REASON::DEAL_REASON_SL
                     || info.close_reason == ENUM_DEAL_REASON::DEAL_REASON_SO)
                 {
-                    OnLocal_PositionChange(eCHANGE_TYPE_SL, currPositions);
+                    OnLocal_PositionChange_Solution1(eCHANGE_TYPE_SL, currPositions);
                 }
                 else
                 {
-                    OnLocal_PositionChange(eCHANGE_TYPE_OTHER, currPositions);
+                    OnLocal_PositionChange_Solution1(eCHANGE_TYPE_OTHER, currPositions);
                 }
             }
             else
@@ -220,14 +242,63 @@ public:
             }
         }
     }
+    void OnRemote_PositionChange_Solution1(int cmdId, iPosition &curRemotePositions[], iPosition &newRemotePositions[], iPosition &closedRemotePositions[])
+    {
+        iPosition curLocalPositions[];
+        DoGetAllPosition(curLocalPositions);
 
-    void OnLocal_PositionChange(EnumChangeType chagne_type, iPosition& currPositions[])
+        // log new positions for debugging
+        string newPostionsStr = "{";
+        for(int i = 0; i < ArraySize(newRemotePositions); i++)
+        {
+            newPostionsStr += ToSimpleString(newRemotePositions[i]) + ";";
+        }
+        newPostionsStr += "}";
+        LOGD("NewPositions[" + IntegerToString(ArraySize(newRemotePositions)) + "]=" + newPostionsStr);
+
+        // log closed positions for debugging
+        string closedPostionsStr = "{";
+        for(int i = 0; i < ArraySize(closedRemotePositions); i++)        {
+            closedPostionsStr += ToSimpleString(closedRemotePositions[i]) + ";";
+        }
+        closedPostionsStr += "}";
+        LOGD("ClosedPositions[" + IntegerToString(ArraySize(closedRemotePositions)) + "]=" + closedPostionsStr);
+
+        // check data validation before processing
+        bool isLocalPositionsValid = Terminal::CheckPositionsValidation(curLocalPositions);
+
+        bool isRemoteCurrentPositionsValid = Terminal::CheckPositionsValidation(curRemotePositions);
+        bool isRemoteClosedPositionsValid = Terminal::CheckPositionsValidation(closedRemotePositions);
+        bool isRemotePositionsValid = isRemoteCurrentPositionsValid && isRemoteClosedPositionsValid;
+
+        if (isLocalPositionsValid == false || isRemotePositionsValid == false)
+        {
+            LOGE("Invalid positions: STOP processing. [isLocalPositionsValid=" + (string)isLocalPositionsValid + ", isRemoteCurrentPositionsValid=" + (string)isRemoteCurrentPositionsValid + ", isRemoteClosedPositionsValid=" + (string)isRemoteClosedPositionsValid + "]");
+            return;
+        }
+
+        // prcess remote command
+        switch(cmdId)
+        {
+            case eCMD_ON_UPDATE:
+            // case eCMD_ON_INIT:
+                // do nothing
+                break;
+            case eCMD_ON_SLSO:
+                OnRemote_StopOut_Solution1(curLocalPositions, curRemotePositions, newRemotePositions, closedRemotePositions);
+                break;
+            default:
+                LOGD("unexpected cmdID: " + IntegerToString(cmdId));
+        }
+    }
+private:
+    void OnLocal_PositionChange_Solution1(EnumChangeType chagne_type, iPosition& currPositions[])
     {
         EnumCmdId cmd_id = eCMD_UNKNOWN;
         switch(chagne_type)
         {
             case eCHANGE_TYPE_SL:
-                cmd_id = eCMD_ON_SL;
+                cmd_id = eCMD_ON_SLSO;
                 break;
             case eCHANGE_TYPE_OTHER:
                 cmd_id = eCMD_ON_UPDATE;
@@ -241,59 +312,16 @@ public:
             SendData(jsonData);
         }
     }
-
-    /**********************************************************************************
-    *
-    *  OnRemote fucntions
-    *        trigger when remote data is received
-    *
-    ***********************************************************************************/
-    void OnRemote_PositionChange(int cmdId, iPosition &currentPositions[], iPosition &newPositions[], iPosition &closedPositions[])
+    void OnRemote_StopOut_Solution1(iPosition &curLocalPositions[], iPosition &curRemotePositions[], iPosition &newRemotePositions[], iPosition &closedRemotePositions[])
     {
-        // log new positions for debugging
-        string newPostionsStr = "{";
-        for(int i = 0; i < ArraySize(newPositions); i++)
-        {
-            newPostionsStr += ToSimpleString(newPositions[i]) + ";";
-        }
-        newPostionsStr += "}";
-        LOGD("NewPositions[" + IntegerToString(ArraySize(newPositions)) + "]=" + newPostionsStr);
-
-        // log closed positions for debugging
-        string closedPostionsStr = "{";
-        for(int i = 0; i < ArraySize(closedPositions); i++)        {
-            closedPostionsStr += ToSimpleString(closedPositions[i]) + ";";
-        }
-        closedPostionsStr += "}";
-        LOGD("ClosedPositions[" + IntegerToString(ArraySize(closedPositions)) + "]=" + closedPostionsStr);
-
-        switch(cmdId)
-        {
-            case eCMD_ON_UPDATE:
-            case eCMD_ON_INIT:
-                // do nothing
-                break;
-            case eCMD_ON_SL:
-                OnRemote_StopOut(currentPositions, newPositions, closedPositions);
-                break;
-            default:
-                LOGD("unexpected cmdID: " + IntegerToString(cmdId));
-        }
-    }
-
-private:
-    void OnRemote_StopOut(iPosition &curPositions[], iPosition &newPositions[], iPosition &closedPositions[])
-    {
-        double newRemmoteVolume = GetTotalVolume(newPositions);
-        double closedRemoteVolume = GetTotalVolume(closedPositions);
-        double currentRemoteVolume = GetTotalVolume(curPositions);
+        double newRemmoteVolume = GetTotalVolume(newRemotePositions);
+        double closedRemoteVolume = GetTotalVolume(closedRemotePositions);
+        double currentRemoteVolume = GetTotalVolume(curRemotePositions);
         if (newRemmoteVolume > 0)
         {
             LOGD("Abnormal case: newRemmoteVolume(" + (string)newRemmoteVolume + ") > 0 when stop out happens" );
         }
 
-        iPosition curLocalPositions[];
-        DoGetAllPosition(curLocalPositions);
         // không process nếu data không hợp lệ.
         if (Terminal::CheckPositionsValidation(curLocalPositions) == false)
         {
@@ -347,4 +375,256 @@ private:
             }
         }
     }
+    /*---------  SOLUTION 1: end ---------*/
+
+    /**********************************************************************************
+    *   command callbacks
+    ***********************************************************************************/
+public:
+    void OnRemote_DoConnecting()
+    {
+        double localAliveVolume = GetTotalAliveVolume();
+        LOGD("<<< Remote terminal connecting...");
+        string jsonData = "{";
+        jsonData += "\"closed_volume_bySLSO\":" + DoubleToString(m_closedVolumeBySLSO) + ",";
+        jsonData += "\"alive_volume\":" + DoubleToString(localAliveVolume);
+        jsonData += "}";
+        SendData(PackJson(eCMD_ON_CONNECTED, jsonData));
+    }
+    void OnRemote_Connected(double remoteClosedVolumeBySLSO, double remoteAliveVolume)
+    {
+        double localAliveVolume = GetTotalAliveVolume();
+        LOGD("<<< Remote connected: " + 
+                "remote[closedBySLSO=" + DoubleToString(remoteClosedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remoteAliveVolume) + "]" + 
+                "local[closedBySLSO=" + DoubleToString(m_closedVolumeBySLSO) + ", closedByTP=" + DoubleToString(m_closedVolumeByTP) + 
+                ", aliveVolume=" + DoubleToString(localAliveVolume) + "]");
+    }
+    void OnRemote_Update(double remoteClosedVolumeBySLSO, double remoteAliveVolume)
+    {
+        double localAliveVolume = GetTotalAliveVolume();
+        LOGD("<<< Remote update: " + 
+                "remote[closedBySLSO=" + DoubleToString(remoteClosedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remoteAliveVolume) + "] " + 
+                "local[closedBySLSO=" + DoubleToString(m_closedVolumeBySLSO) +  ", closedByTP=" + DoubleToString(m_closedVolumeByTP) + ", aliveVolume=" + DoubleToString(localAliveVolume) + "]");
+    }
+    void DoSendAliveMsg()
+    {
+        string jsonData = "{}";
+        SendData(PackJson(eCMD_PING_ALIVE, jsonData));
+    }
+    /**********************************************************************************
+    *   SOLUTION 2: start
+    *   logic:
+    *       local change -> do nothing
+    *       local SL/SO  -> update m_closedVolumeByTP, send trigger to remote.
+    *       local TP     -> update m_closedVolumeByTP.
+    *       remote SL/SO -> receive trigger from remote, 
+    *                       then get current local position, 
+    *                       compare with current remote position to find out 
+    *                       which position is closed by SL/SO, 
+    *                       then close the same position locally if it's not closed yet.
+    *
+    ***********************************************************************************/
+public:
+    void OnLocal_OnTradeTransaction_Solution2(const MqlTradeTransaction& trans,
+                            const MqlTradeRequest& request,
+                            const MqlTradeResult& result)
+    {
+        LOGD("TRANS: " + EnumToString(trans.type));
+        if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
+        {
+            LOGD(ToString(trans));
+            LOGD(ToString(request));
+            LOGD(ToString(result));
+            if(!HistoryDealSelect(trans.deal))
+            {
+                return;
+            }
+            long entry = HistoryDealGetInteger(trans.deal, DEAL_ENTRY);
+            bool needSentUpdate = false;
+            if(entry == DEAL_ENTRY_IN)
+            {
+                needSentUpdate = true;
+                LOGD(">>> POSITION OPENED: " + (string)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID));
+            }
+            else if(entry == DEAL_ENTRY_OUT)
+            {
+                needSentUpdate = true;
+                iPosition info;
+                ZeroMemory(info);
+
+                info.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
+                info.deal_ticket     = trans.deal;
+                info.symbol          = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
+                info.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
+                info.price_close     = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
+                info.time_close      = (datetime)HistoryDealGetInteger(trans.deal, DEAL_TIME);
+                info.status          = ePOSITION_STATUS_CLOSED;
+                info.close_reason    = (ENUM_DEAL_REASON)HistoryDealGetInteger(trans.deal, DEAL_REASON);
+                LOGD(">>> POSITION CLOSED: " + ToString(info));
+
+
+                if (info.close_reason == ENUM_DEAL_REASON::DEAL_REASON_TP)
+                {
+                    // lưu lại thông tin các lệnh bị đóng do TP
+                    // để check khi remote SL/SO.
+                    m_closedVolumeByTP += info.volume;
+                }
+                else if (info.close_reason == ENUM_DEAL_REASON::DEAL_REASON_SL
+                        || info.close_reason == ENUM_DEAL_REASON::DEAL_REASON_SO)
+                {
+                    // lưu lại thông tin các lệnh bị đóng do SL/SO
+                    // để check khi remote SL/SO
+                    m_closedVolumeBySLSO += info.volume;
+
+                    // send data to remote:
+                    double local_aliveVolume = GetTotalAliveVolume();
+
+                    EnumCmdId cmd = eCMD_ON_SLSO;
+                    string jsonData = "{";
+                    jsonData += "\"closed_volume_bySLSO\":" + DoubleToString(m_closedVolumeBySLSO) + ",";
+                    jsonData += "\"alive_volume\":" + DoubleToString(local_aliveVolume);
+                    jsonData += "}";
+                    SendData(PackJson(cmd, jsonData));
+                }
+            }
+            else
+            {
+                LOGD(">>> POSITION CHANGED: " + IntegerToString(entry));
+            }
+
+            if (needSentUpdate)
+            {
+                double local_aliveVolume = GetTotalAliveVolume();
+
+                EnumCmdId cmd = eCMD_ON_UPDATE;
+                string jsonData = "{";
+                jsonData += "\"closed_volume_bySLSO\":" + DoubleToString(m_closedVolumeBySLSO) + ",";
+                jsonData += "\"alive_volume\":" + DoubleToString(local_aliveVolume);
+                jsonData += "}";
+                SendData(PackJson(cmd, jsonData));
+            }
+        }
+    }
+    // callback cho remote terminal khi nhận được trigger SL/SO từ remote
+    void OnRemote_SLSO(double remote_closedVolumeBySLSO, double remote_aliveVolume)
+    {
+        LOGD("<<< Remote SL/StopOut received: remote[closedBySLSO=" + DoubleToString(remote_closedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remote_aliveVolume) + "]");
+        switch(CommonDatacenter::sLOCAL_TERMINAL_TYPE)
+        {
+            case eTERMINAL_TYPE_EXNESS:
+                OnRemoteXM_SLSO(remote_closedVolumeBySLSO, remote_aliveVolume);
+                break;
+            case eTERMINAL_TYPE_XM:
+                OnRemoteEX_SLSO();
+                break;
+            default:
+                LOGE("Unknown terminal type: " + EnumToString(CommonDatacenter::sLOCAL_TERMINAL_TYPE));
+        }
+    }
+private:
+    void OnRemoteEX_SLSO()
+    {
+        // khi EX stopout -> Ex stopout ở một điểm nên phải cắt XM ngay.
+        LOGD(">>> RemoteEX SL/StopOut. Close all local positions.");
+        DoEndAllPositions();
+    }
+    void OnRemoteXM_SLSO(double remote_closedVolumeBySLSO, double remote_aliveVolume)
+    {
+        iPosition curLocalPositions[];
+        DoGetAllPosition(curLocalPositions);
+        double local_aliveVolume = GetTotalVolume(curLocalPositions);
+        LOGD(">>> RemoteXM SL/StopOut. Remote[closedBySLSO=" + DoubleToString(remote_closedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remote_aliveVolume) + "] "
+                + "Local[closedByTP=" + DoubleToString(m_closedVolumeByTP) + ", aliveVolume=" + DoubleToString(local_aliveVolume) + "]");
+        
+        if (remote_aliveVolume == 0 && local_aliveVolume > 0)
+        {
+            LOGD("Remote volume is 0 but local still has open positions -> Close all");
+            DoEndAllPositions();
+        }
+        else if (remote_aliveVolume > 0)
+        {
+            // đóng thêm số volme cần thiết để closed volume 2 bên bằng nhau
+            double volumeDiff = remote_closedVolumeBySLSO - m_closedVolumeByTP;
+            while (volumeDiff > 0)
+            {
+                // tìm position có volume lớn nhất để cắt.
+                int cutIdx = -1;
+                double cutVolume = 0;
+                bool isPartialCut = false;
+                int size = ArraySize(curLocalPositions);
+                for (int i = 0; i < size; i++)
+                {
+                    if (curLocalPositions[i].volume <= volumeDiff && curLocalPositions[i].volume > cutVolume)
+                    {
+                        cutVolume = curLocalPositions[i].volume;
+                        cutIdx = i;
+                    }
+                }
+                // nếu ko tìm thấy cái nào phù hợp, thì tìm position có volume bé nhất để cắt 1 phần.
+                if (cutIdx == -1)
+                {
+                    isPartialCut = true;
+                    double minVolume = DBL_MAX;
+                    cutVolume = volumeDiff;
+                    for (int i = 0; i < size; i++)
+                    {
+                        if (curLocalPositions[i].volume > cutVolume && curLocalPositions[i].volume < minVolume)
+                        {
+                            minVolume = curLocalPositions[i].volume;
+                            cutIdx = i;
+                        }
+                    }
+                }
+                if (cutIdx >= 0)
+                {
+                    bool res = false;
+                    if (isPartialCut)
+                    {
+                        res = DoClosePartialPosition(curLocalPositions[cutIdx].position_ticket, cutVolume);
+                    }
+                    else
+                    {
+                        res = DoClosePosition(curLocalPositions[cutIdx].position_ticket);
+                    }
+                    if (res == true)
+                    {
+                        LOGD("---> Closed position by tool: " + IntegerToString(curLocalPositions[cutIdx].position_ticket) + " | cutVolume: " + DoubleToString(cutVolume) + " | isPartialCut: " + (string)isPartialCut);
+                        
+                        // remove closed position from local array to avoid close it again in next loop
+                        if (isPartialCut)
+                        {
+                            curLocalPositions[cutIdx].volume -= cutVolume;
+                        }
+                        else
+                        {
+                            for(int i = cutIdx; i < size - 1; i++)
+                            {
+                                curLocalPositions[i] = curLocalPositions[i + 1];
+                            }
+                            ArrayResize(curLocalPositions, size - 1);
+                        }
+
+                        // giảm đi phần volude đã đóng
+                        volumeDiff -= cutVolume;
+
+                        // thêm cutVolume vào m_closedVolumeByTP để theo dõi tổng 
+                        // volume đã đóng do TP
+                        m_closedVolumeByTP += cutVolume;
+                    }
+                    else
+                    {
+                        LOGE("---> Failed to close position by tool: ticket=" + IntegerToString(curLocalPositions[cutIdx].position_ticket) + " | Error: " + IntegerToString(GetLastError()));
+                        break;
+                    }
+                }
+                else
+                {
+                    LOGE("Can not find position to cut");
+                    break;
+                }
+            }
+        }
+    }
+    /*---------  SOLUTION 2: end ---------*/
+
 };

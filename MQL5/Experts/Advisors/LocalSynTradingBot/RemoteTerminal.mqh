@@ -6,24 +6,71 @@
 
 #include <trade/trade.mqh>
 
-class RemoteTerminal  : public Terminal
+class RemoteTerminal
 {
-private:
+private:    /*
+    * connection state to remote terminal EA.
+    */
+    RemoteConnectionState m_state;
+
+    // last time receive data from remote terminal, used to detect disconnection.
+    ulong mLastTimeAliveReceived;
+    ulong mLastTimePingSent;
+    void SetConnectionState(RemoteConnectionState newState)
+    {
+        if (m_state != newState)
+        {
+            m_state = newState;
+            LOGD("Remote connection state changed: " + (string)m_state);
+            
+            // reset vị trí đọc file.
+            if (m_state == eREMOTE_STATE_NOT_CONNECTED)
+            {
+                mLastReadPosition = 0;
+            }
+
+            // lấy time đầu tiên khi kết nối.
+            if (m_state == eREMOTE_STATE_CONNECTED)
+            {
+                mLastTimeAliveReceived = TimeCurrent();
+                mLastTimePingSent = mLastTimeAliveReceived;
+            }
+        }
+    }
+
     LocalTerminal *m_pLocalTerminal;
     ulong mLastReadPosition;
 
+    /*
+    * lưu giá trị volume đã bị đóng bở SL hoặc StopOut từ phía remote.
+    */
+    double m_closedVolumeBySLSO;
+    double m_alivePositionsVolume;
+
 public:
-    RemoteTerminal(LocalTerminal *pLocalTerminal) : m_pLocalTerminal(pLocalTerminal) {}
+    RemoteTerminal(LocalTerminal *pLocalTerminal) 
+    :   m_pLocalTerminal(pLocalTerminal), 
+        m_state(eREMOTE_STATE_NOT_CONNECTED), 
+        mLastReadPosition(0),
+        m_closedVolumeBySLSO(0.0), m_alivePositionsVolume(0.0)
+    {}
+
     ~RemoteTerminal() {}
+
+    RemoteConnectionState GetConnectionState()
+    {
+        return m_state;
+    }
 
     void DoPoll()
     {
         if (CommonDatacenter::sFILE_INPUT == "")
         {
             LOGE("sFILE_INPUT is empty");
+            SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
             return;
         }
-        // Check if file exists
+
         if (!FileIsExist(CommonDatacenter::sFILE_INPUT, FILE_COMMON))
         {
             static int reduceLogCount = 0;
@@ -32,16 +79,46 @@ public:
                 LOGE("sFILE_INPUT does not exist: " + CommonDatacenter::sFILE_INPUT);
             }
             reduceLogCount++;
+            if (m_state != eREMOTE_STATE_NOT_CONNECTED)
+            {
+                // state chuyển từ connected  -> not connect
+                //                 connecting -> not connect
+                // => thực hiện reset file, và resonnecting
+                m_pLocalTerminal.DoReConnecting();
+
+                SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
+            }
             return;
         }
+
+        // trong trường hợp state đang not connecect,
+        // file được tạo ra bởi remote terminal -> chuyển sang connecting và chờ connect.
+        if (m_state == eREMOTE_STATE_NOT_CONNECTED)
+        {
+            LOGD("File detected, trying to connect...");
+            SetConnectionState(eREMOTE_STATE_CONNECTING);
+        }
+
+        // nếu ko nhận dc eCMD_PING_ALIVE trong hơn 60 giây, coi như đã mất kết nối.
+        // chuyển trạng thái sang connecting để chờ kết nối lại.
+        if (m_state == eREMOTE_STATE_CONNECTED)
+        {
+            datetime now = TimeCurrent();
+            if (now - mLastTimeAliveReceived >= 60)
+            {
+                LOGD("No alive signal received for 60 seconds");
+                SetConnectionState(eREMOTE_STATE_CONNECTING);
+            }
+            if (now - mLastTimePingSent >= 30)
+            {
+                m_pLocalTerminal.DoSendAliveMsg();
+                mLastTimePingSent = now;
+            }
+        }
+
         int handle = FileOpen(CommonDatacenter::sFILE_INPUT, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
-            iPosition positions[];
-            ulong cmd = eCMD_UNKNOWN;
-            bool isDataParsed = false;
-            int dataLineCount = 0;
-
             // Check file size before seeking
             FileSeek(handle, 0, SEEK_END);
             ulong end_pos = FileTell(handle);
@@ -51,92 +128,92 @@ public:
                 mLastReadPosition = 0;
             }
 
+            bool ExistedFlag[eCMD_MAX] = {false};
+            string cmdJsonStr[eCMD_MAX] = {""};
+
             FileSeek(handle, mLastReadPosition, SEEK_SET);
             while(!FileIsEnding(handle))
             {
                 string line = FileReadString(handle);
-                dataLineCount += 1;
+
                 if(StringLen(line) > 0)
                 {
-                    // chỉ lấy command ID có priority cao nhất, và data cuối cùng
-                    // bởi vì có thể có nhiều cmd được ghi vào cùng một lúc.
-
                     // Parse cmdId:
-                    ulong temp_cmd = eCMD_UNKNOWN;
-                    int cmd_pos = StringFind(line, "\"cmd\":");
-                    if(cmd_pos >= 0)
+                    ulong cmd = ParseIntValue(line, "cmd");
+
+                    // parse tất cả command và lưu giá trị cuối cùng vào mảng.
+                    if (cmd > eCMD_UNKNOWN && cmd < eCMD_MAX)
                     {
-                        int cmd_start = cmd_pos + 6;
-                        int cmd_end = StringFind(line, ",", cmd_start);
-                        if(cmd_end > cmd_start)
-                        {
-                            temp_cmd = (ulong)StringToInteger(StringSubstr(line, cmd_start, cmd_end-cmd_start));
-                        }
+                        string json_str = ParseJsonValue(line, "cmd_data");
+                        ExistedFlag[cmd] = true;
+                        cmdJsonStr[cmd] = json_str;
                     }
-                    if (temp_cmd < cmd)
+                    else
                     {
-                        cmd = temp_cmd;
-                    }
-                    
-                    // Parse data array
-                    // only take positions if this is end of file.
-                    if (FileIsEnding(handle))
-                    {
-                        int data_pos = StringFind(line, "\"curent_positions\":[");
-                        if(data_pos >= 0)
-                        {
-                            int arr_start = data_pos + 20;
-                            int arr_end = StringFind(line, "]", arr_start);
-                            if(arr_end > arr_start)
-                            {
-                                string arr_content = StringSubstr(line, arr_start, arr_end-arr_start);
-                                RemoteTerminal::ParseJsonArrayToPositions(arr_content, positions);
-                            }
-                        }
-                        isDataParsed = true;
+                        LOGE("Invalid cmd in line: " + line);
                     }
                 }
             }
             mLastReadPosition = FileTell(handle);
             FileClose(handle);
 
-            if (dataLineCount > 1)
+            // xử lý từng command nhận được với latest cmd_data
+            for (ulong cmd = 0; cmd < eCMD_MAX; cmd++)
             {
-                LOGD(" <<< RECV: Multiline data detected:  " + (string)dataLineCount);
-            }
-
-            // Xử lý tiếp với positions[] nếu cần
-            if (isDataParsed == true && cmd != eCMD_UNKNOWN)
-            {
-                LOGD(" <<< RECV: cmdID=" + IntegerToString(cmd) + ", positions count=" + IntegerToString(ArraySize(positions)));
-
-                // không process nếu data không hợp lệ.
-                if (Terminal::CheckPositionsValidation(positions) == false)
+                if (ExistedFlag[cmd] == true)
                 {
-                    return;
+                    switch (m_state)
+                    {
+                        case eREMOTE_STATE_CONNECTING:
+                            if (cmd == eCMD_ON_CONNECTED)
+                            {
+                                m_closedVolumeBySLSO = ParseDoubleValue(cmdJsonStr[cmd], "closed_volume_bySLSO");
+                                m_alivePositionsVolume = ParseDoubleValue(cmdJsonStr[cmd], "alive_volume");
+                                m_pLocalTerminal.OnRemote_Connected(m_closedVolumeBySLSO, m_alivePositionsVolume);
+                                SetConnectionState(eREMOTE_STATE_CONNECTED);
+                            }
+                            else if (cmd == eCMD_DO_CONNECTING)
+                            {
+                                m_pLocalTerminal.OnRemote_DoConnecting();
+                            }
+                            else
+                            {
+                                LOGD("Still connecting... Received cmd: " + (string)cmd);
+                            }
+                            break;
+                        case eREMOTE_STATE_CONNECTED:
+                            if (cmd == eCMD_ON_SLSO)
+                            {
+                                m_closedVolumeBySLSO = ParseDoubleValue(cmdJsonStr[cmd], "closed_volume_bySLSO");
+                                m_alivePositionsVolume = ParseDoubleValue(cmdJsonStr[cmd], "alive_volume");
+                                m_pLocalTerminal.OnRemote_SLSO(m_closedVolumeBySLSO, m_alivePositionsVolume);
+                            }
+                            else if (cmd == eCMD_PING_ALIVE)
+                            {
+                                mLastTimeAliveReceived = TimeCurrent();
+                            }
+                            else if (cmd == eCMD_ON_UPDATE)
+                            {
+                                m_closedVolumeBySLSO = ParseDoubleValue(cmdJsonStr[cmd], "closed_volume_bySLSO");
+                                m_alivePositionsVolume = ParseDoubleValue(cmdJsonStr[cmd], "alive_volume");
+                                m_pLocalTerminal.OnRemote_Update(m_closedVolumeBySLSO, m_alivePositionsVolume);
+                            }
+                            else
+                            {
+                                LOGE("Not expected cmd: " + (string)cmd + " in state: " + (string)m_state);
+                            }
+                            break;
+                        default:
+                            LOGE("Not expected state: " + (string)m_state);
+                            break;
+                    }
                 }
-                
-                iPosition closedPositions[];
-                iPosition newPositions[];
-                ComparePositions(positions, newPositions, closedPositions);
-                if (cmd < eCMD_UNKNOWN)
-                {
-                    m_pLocalTerminal.OnRemote_PositionChange(cmd, positions, newPositions, closedPositions);
-                    UpdateCurrentPositions(positions);
-                }
-            }
-            else if (isDataParsed == false && cmd != eCMD_UNKNOWN)
-            {
-                LOGE("data is not retreived cmdID=" + IntegerToString(cmd));
-            }
-            else
-            {
-                // ignore if there is no data is read
             }
         }
         else
         {
             LOGE("Failed to open file: " + CommonDatacenter::sFILE_INPUT);
+            SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
         }
     }
 
@@ -195,5 +272,122 @@ private:
             positions[n] = info;
             pos = obj_end+1;
         }
+    }
+
+    // lấy giá trị của key trong json string, nếu có.
+    static string ParseJsonValue(const string &json,const string &key)
+    {
+        string pattern="\""+key+"\":";
+        int pos=StringFind(json,pattern);
+        if(pos<0) return "";
+
+        int value_start=pos+StringLen(pattern);
+
+        // skip whitespace
+        while(value_start<StringLen(json))
+        {
+            ushort c=StringGetCharacter(json,value_start);
+            if(c!=' ' && c!='\t' && c!='\n' && c!='\r')
+                break;
+            value_start++;
+        }
+
+        if(value_start>=StringLen(json))
+            return "";
+
+        ushort first=StringGetCharacter(json,value_start);
+
+        // STRING
+        if(first=='"')
+        {
+            value_start++;
+            int value_end=StringFind(json,"\"",value_start);
+            if(value_end>value_start)
+            {
+                return StringSubstr(json,value_start,value_end-value_start);
+            }
+        }
+
+        // OBJECT
+        if(first=='{')
+        {
+            int depth=1;
+            int i=value_start+1;
+
+            while(i<StringLen(json) && depth>0)
+            {
+                ushort c=StringGetCharacter(json,i);
+                if(c=='{') depth++;
+                if(c=='}') depth--;
+                i++;
+            }
+
+            if(depth==0)
+            {
+                return StringSubstr(json,value_start,i-value_start);
+            }
+        }
+
+        // ARRAY
+        if(first=='[')
+        {
+            int depth=1;
+            int i=value_start+1;
+
+            while(i<StringLen(json) && depth>0)
+            {
+                ushort c=StringGetCharacter(json,i);
+                if(c=='[') depth++;
+                if(c==']') depth--;
+                i++;
+            }
+
+            if(depth==0)
+                return StringSubstr(json,value_start,i-value_start);
+        }
+
+        // NUMBER / BOOL / NULL
+        int i=value_start;
+        while(i<StringLen(json))
+        {
+            ushort c=StringGetCharacter(json,i);
+            if(c==',' || c=='}' || c==']')
+                break;
+            i++;
+        }
+
+        if(i>value_start)
+        {
+            return Trim(StringSubstr(json,value_start,i-value_start));
+        }
+
+        return "";
+    }
+
+    static double ParseDoubleValue(const string &json, const string &key)
+    {
+        string value_str = ParseJsonValue(json, key);
+        if (value_str != "")
+        {
+            return StringToDouble(value_str);
+        }
+        else
+        {
+            LOGE("Key not found or value is empty: " + key + " in json: " + json);
+        }
+        return 0.0;
+    }
+    static int ParseIntValue(const string &json, const string &key)
+    {
+        string value_str = ParseJsonValue(json, key);
+        if (value_str != "")
+        {
+            return StringToInteger(value_str);
+        }
+        else
+        {
+            LOGE("Key not found or value is empty: " + key + " in json: " + json);
+        }
+        return 0;
     }
 };

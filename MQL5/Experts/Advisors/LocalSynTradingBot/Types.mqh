@@ -15,10 +15,20 @@ enum EnumChangeType
 
 enum EnumCmdId
 {
-    eCMD_ON_SL = 1,
-    eCMD_ON_INIT,
+    eCMD_UNKNOWN,
+    eCMD_DO_CONNECTING,
+    eCMD_ON_CONNECTED,
+    eCMD_ON_SLSO,
     eCMD_ON_UPDATE,
-    eCMD_UNKNOWN
+    eCMD_PING_ALIVE,
+    eCMD_MAX
+};
+
+enum RemoteConnectionState
+{
+    eREMOTE_STATE_NOT_CONNECTED = 0,
+    eREMOTE_STATE_CONNECTING,
+    eREMOTE_STATE_CONNECTED,
 };
 
 enum EnumPositionStatus
