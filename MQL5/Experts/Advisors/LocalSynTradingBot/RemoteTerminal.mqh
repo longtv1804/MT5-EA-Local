@@ -6,9 +6,10 @@
 
 #include <trade/trade.mqh>
 
-class RemoteTerminal
+class RemoteTerminal : public Terminal
 {
-private:    /*
+private:
+    /*
     * connection state to remote terminal EA.
     */
     RemoteConnectionState m_state;
@@ -48,14 +49,31 @@ private:    /*
     double m_alivePositionsVolume;
 
 public:
-    RemoteTerminal(LocalTerminal *pLocalTerminal) 
-    :   m_pLocalTerminal(pLocalTerminal), 
+    RemoteTerminal() 
+    :   m_pLocalTerminal(NULL), 
         m_state(eREMOTE_STATE_NOT_CONNECTED), 
         mLastReadPosition(0),
         m_closedVolumeBySLSO(0.0), m_alivePositionsVolume(0.0)
     {}
 
     ~RemoteTerminal() {}
+
+    void init(Terminal* remoteTerminal) override
+    {
+        m_pLocalTerminal = (LocalTerminal*)remoteTerminal;
+    }
+    void termniate() override
+    {
+    }
+    void ResetTradingSession()
+    {
+        m_closedVolumeBySLSO = 0.0;
+        m_alivePositionsVolume = 0.0;
+    }
+    double GetAliveVolume() override
+    {
+        return m_alivePositionsVolume;
+    }
 
     RemoteConnectionState GetConnectionState()
     {
@@ -115,10 +133,12 @@ public:
                 mLastTimePingSent = now;
             }
         }
-
+        static int openFileErrorCount = 0;
         int handle = FileOpen(CommonDatacenter::sFILE_INPUT, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
+            openFileErrorCount = 0;
+
             // Check file size before seeking
             FileSeek(handle, 0, SEEK_END);
             ulong end_pos = FileTell(handle);
@@ -213,7 +233,12 @@ public:
         else
         {
             LOGE("Failed to open file: " + CommonDatacenter::sFILE_INPUT);
-            SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
+            openFileErrorCount += 1;
+            if (openFileErrorCount == 15)
+            {
+                LOGE("Failed to open file for 15 times, resetting connection state.");
+                SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
+            }
         }
     }
 

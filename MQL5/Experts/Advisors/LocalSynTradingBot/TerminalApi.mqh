@@ -75,31 +75,60 @@ void DoGetAllPosition(iPosition &resArr[])
 
 bool DoClosePosition(ulong position_ticket)
 {
+    bool res = false;
     if(PositionSelectByTicket(position_ticket))
     {
         CTrade trade;
-        return trade.PositionClose(position_ticket);
+        res = trade.PositionClose(position_ticket);
+        if (res == true)
+        {
+            LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+        }
+        else
+        {
+            LOGE("Failed to closs [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+        }
     }
-    return false;
+    return res;
 }
 
 bool DoClosePartialPosition(ulong position_ticket, double volume)
 {
+    bool res = false;
     if(PositionSelectByTicket(position_ticket))
     {
         CTrade trade;
-        return trade.PositionClosePartial(position_ticket, volume);
+        res = trade.PositionClosePartial(position_ticket, volume);
+        if (res == true)
+        {
+            LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+        }
+        else
+        {
+            LOGE("Failed to closs [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+        }
+
     }
-    return false;
+    return res;
 }
 
 void DoEndAllPositions()
 {
     CTrade trade;
     int total = PositionsTotal();
-    for(int i = 0; i < total; i++)
+    while (total > 0)
     {
-        ulong ticket = PositionGetTicket(i);
-        trade.PositionClose(ticket);
+        ulong ticket = PositionGetTicket(0);
+        bool res = trade.PositionClose(ticket);
+        if (res == true)
+        {
+            LOGD("Closed position [ " + IntegerToString(ticket) + " ]");
+        }
+        else
+        {
+            LOGE("Failed to close [" + IntegerToString(ticket) + "] | Error: " + IntegerToString(GetLastError()));
+            break;
+        }
+        total -= 1;
     }
 }

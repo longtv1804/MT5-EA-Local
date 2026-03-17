@@ -26,7 +26,7 @@ input double iVal_TP = 0.0;            // TP (Only SELL)
 *
 ***********************************************************************/
 LocalTerminal g_MyTerminal;
-RemoteTerminal g_RemoteTerminal(&g_MyTerminal);
+RemoteTerminal g_RemoteTerminal;
 TpSLController g_TpSlController;
 
 /**********************************************************************
@@ -51,7 +51,8 @@ int OnInit()
 
    if (i_FEATURE_AUTO_TP)
    {
-      g_MyTerminal.init();
+      g_MyTerminal.init(& g_RemoteTerminal);
+      g_RemoteTerminal.init(& g_MyTerminal);
    }
    if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
          && CommonDatacenter::sLOCAL_TERMINAL_TYPE == eTERMINAL_TYPE_XM)
@@ -66,6 +67,7 @@ void OnDeinit(const int reason)
 {
    EventKillTimer();
    g_MyTerminal.termniate();
+   g_RemoteTerminal.termniate();
    LOGD("*************** EA FINISH ***************");
 }
 

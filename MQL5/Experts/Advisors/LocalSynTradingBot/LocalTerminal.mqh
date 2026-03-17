@@ -4,22 +4,25 @@
 #include "Types.mqh"
 #include "Utils.mqh"
 
-class LocalTerminal
+class LocalTerminal : public Terminal
 {
 private:
     // chỉ lưu các lệnh TP và các lệnh close do EA.
     double m_closedVolumeByTP;
     double m_closedVolumeBySLSO;
 
+    Terminal* m_pRemoteTerminal;
+
 public:
     LocalTerminal() 
     : m_closedVolumeByTP(0.0), 
-    m_closedVolumeBySLSO(0.0) {}
+    m_closedVolumeBySLSO(0.0), m_pRemoteTerminal(NULL) {}
 
     ~LocalTerminal() {}
 
-    void init()
+    void init(Terminal* remoteTerminal) override
     {
+        m_pRemoteTerminal = remoteTerminal;
         InitFiles();
         
         // send init data to remote terminal
@@ -28,13 +31,33 @@ public:
         SendData(PackJson(cmd, jsonData));
     }
 
+    void ResetTradingSession(double remoteAliveVolume, double localAliveVolume)
+    {
+        if (remoteAliveVolume == 0 && localAliveVolume == 0)
+        {
+            LOGD("All done, reset variables");
+            ResetTradingSession();
+            m_pRemoteTerminal.ResetTradingSession();
+        }
+    }
+    void ResetTradingSession() override
+    {
+        m_closedVolumeByTP = 0.0;
+        m_closedVolumeBySLSO = 0.0;
+    }
+
+    double GetAliveVolume() override
+    {
+        return GetTotalAliveVolume();
+    }
+
     void DoReConnecting()
     {
         LOGD("==== Do Re-Connecting... ====");
-        init();
+        init(m_pRemoteTerminal);
     }
 
-    void termniate()
+    void termniate() override
     {
         // xóa file output
         if(CommonDatacenter::sFILE_OUTPUT != "" && FileIsExist(CommonDatacenter::sFILE_OUTPUT, FILE_COMMON))
@@ -405,6 +428,8 @@ public:
         LOGD("<<< Remote update: " + 
                 "remote[closedBySLSO=" + DoubleToString(remoteClosedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remoteAliveVolume) + "] " + 
                 "local[closedBySLSO=" + DoubleToString(m_closedVolumeBySLSO) +  ", closedByTP=" + DoubleToString(m_closedVolumeByTP) + ", aliveVolume=" + DoubleToString(localAliveVolume) + "]");
+
+        ResetTradingSession(remoteAliveVolume, localAliveVolume);
     }
     void DoSendAliveMsg()
     {
@@ -432,15 +457,13 @@ public:
         LOGD("TRANS: " + EnumToString(trans.type));
         if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
         {
-            LOGD(ToString(trans));
-            LOGD(ToString(request));
-            LOGD(ToString(result));
             if(!HistoryDealSelect(trans.deal))
             {
                 return;
             }
             long entry = HistoryDealGetInteger(trans.deal, DEAL_ENTRY);
             bool needSentUpdate = false;
+            double local_aliveVolume = GetTotalAliveVolume();
             if(entry == DEAL_ENTRY_IN)
             {
                 needSentUpdate = true;
@@ -477,14 +500,13 @@ public:
                     m_closedVolumeBySLSO += info.volume;
 
                     // send data to remote:
-                    double local_aliveVolume = GetTotalAliveVolume();
-
                     EnumCmdId cmd = eCMD_ON_SLSO;
                     string jsonData = "{";
                     jsonData += "\"closed_volume_bySLSO\":" + DoubleToString(m_closedVolumeBySLSO) + ",";
                     jsonData += "\"alive_volume\":" + DoubleToString(local_aliveVolume);
                     jsonData += "}";
                     SendData(PackJson(cmd, jsonData));
+                    needSentUpdate = false; // đã gửi update trong case SL/SO, nên set lại flag để tránh gửi thêm 1 lần nữa ở phần cuối.
                 }
             }
             else
@@ -494,8 +516,6 @@ public:
 
             if (needSentUpdate)
             {
-                double local_aliveVolume = GetTotalAliveVolume();
-
                 EnumCmdId cmd = eCMD_ON_UPDATE;
                 string jsonData = "{";
                 jsonData += "\"closed_volume_bySLSO\":" + DoubleToString(m_closedVolumeBySLSO) + ",";
@@ -503,6 +523,7 @@ public:
                 jsonData += "}";
                 SendData(PackJson(cmd, jsonData));
             }
+            ResetTradingSession(m_pRemoteTerminal.GetAliveVolume(), local_aliveVolume);
         }
     }
     // callback cho remote terminal khi nhận được trigger SL/SO từ remote
@@ -520,12 +541,13 @@ public:
             default:
                 LOGE("Unknown terminal type: " + EnumToString(CommonDatacenter::sLOCAL_TERMINAL_TYPE));
         }
+        ResetTradingSession(remote_aliveVolume, GetTotalAliveVolume());
     }
 private:
     void OnRemoteEX_SLSO()
     {
         // khi EX stopout -> Ex stopout ở một điểm nên phải cắt XM ngay.
-        LOGD(">>> RemoteEX SL/StopOut. Close all local positions.");
+        LOGD("RemoteEX SL/StopOut. Close all local positions.");
         DoEndAllPositions();
     }
     void OnRemoteXM_SLSO(double remote_closedVolumeBySLSO, double remote_aliveVolume)
@@ -533,7 +555,7 @@ private:
         iPosition curLocalPositions[];
         DoGetAllPosition(curLocalPositions);
         double local_aliveVolume = GetTotalVolume(curLocalPositions);
-        LOGD(">>> RemoteXM SL/StopOut. Remote[closedBySLSO=" + DoubleToString(remote_closedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remote_aliveVolume) + "] "
+        LOGD("RemoteXM SL/StopOut. Remote[closedBySLSO=" + DoubleToString(remote_closedVolumeBySLSO) + ", aliveVolume=" + DoubleToString(remote_aliveVolume) + "] "
                 + "Local[closedByTP=" + DoubleToString(m_closedVolumeByTP) + ", aliveVolume=" + DoubleToString(local_aliveVolume) + "]");
         
         if (remote_aliveVolume == 0 && local_aliveVolume > 0)

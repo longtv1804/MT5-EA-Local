@@ -124,6 +124,11 @@ protected:
         }
         return sum;
     }
+public:
+    virtual void init(Terminal* remoteTerminal) = 0;
+    virtual void termniate() = 0;
+    virtual void ResetTradingSession() = 0;
+    virtual double GetAliveVolume() = 0;
 
 public:
     // data validation:
