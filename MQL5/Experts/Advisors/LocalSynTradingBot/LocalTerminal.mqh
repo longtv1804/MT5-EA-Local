@@ -567,7 +567,7 @@ private:
         {
             // đóng thêm số volme cần thiết để closed volume 2 bên bằng nhau
             double volumeDiff = remote_closedVolumeBySLSO - m_closedVolumeByTP;
-            while (volumeDiff > 0)
+            while (volumeDiff > 0 && ArraySize(curLocalPositions) > 0)
             {
                 // tìm position có volume lớn nhất để cắt.
                 int cutIdx = -1;
@@ -576,26 +576,16 @@ private:
                 int size = ArraySize(curLocalPositions);
                 for (int i = 0; i < size; i++)
                 {
-                    if (curLocalPositions[i].volume <= volumeDiff && curLocalPositions[i].volume > cutVolume)
+                    if (curLocalPositions[i].volume > cutVolume)
                     {
                         cutVolume = curLocalPositions[i].volume;
                         cutIdx = i;
                     }
                 }
-                // nếu ko tìm thấy cái nào phù hợp, thì tìm position có volume bé nhất để cắt 1 phần.
-                if (cutIdx == -1)
+                if (cutIdx != -1 && cutVolume > volumeDiff)
                 {
-                    isPartialCut = true;
-                    double minVolume = DBL_MAX;
                     cutVolume = volumeDiff;
-                    for (int i = 0; i < size; i++)
-                    {
-                        if (curLocalPositions[i].volume > cutVolume && curLocalPositions[i].volume < minVolume)
-                        {
-                            minVolume = curLocalPositions[i].volume;
-                            cutIdx = i;
-                        }
-                    }
+                    isPartialCut = true;
                 }
                 if (cutIdx >= 0)
                 {
