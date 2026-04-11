@@ -7,9 +7,9 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 
-#include "LocalTerminal.mqh"
-#include "RemoteTerminal.mqh"
+#include "AutoTpController.mqh"
 #include "TpSlController.mqh"
+#include "Utlis.mqh"
 
 // ================= INPUT =================
 input bool i_FEATURE_AUTO_PLACE_REMOVE_TP = true;     // tool của sangtv
@@ -25,8 +25,7 @@ input double iVal_TP = 0.0;            // TP (Only SELL)
 *   golbal variable
 *
 ***********************************************************************/
-LocalTerminal g_MyTerminal;
-RemoteTerminal g_RemoteTerminal;
+AutoTpController g_AutoTpController;
 TpSLController g_TpSlController;
 
 /**********************************************************************
@@ -40,46 +39,44 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
 {
    if (i_FEATURE_AUTO_TP)
    {
-      g_MyTerminal.OnLocal_OnTradeTransaction_Solution2(trans, request, result);
+        g_AutoTpController.OnLocal_OnTradeTransaction(trans, request, result);
    }
 }
 
 int OnInit()
 {
-   LOGD("");
-   LOGD("*************** EA INIT ****************");
+    LOGD("*************** EA INIT ****************");
 
-   if (i_FEATURE_AUTO_TP)
-   {
-      g_MyTerminal.init(& g_RemoteTerminal);
-      g_RemoteTerminal.init(& g_MyTerminal);
-   }
-   if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
-         && CommonDatacenter::sLOCAL_TERMINAL_TYPE == eTERMINAL_TYPE_XM)
-   {
-      g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
-   }
-   EventSetTimer(1);
-   return(INIT_SUCCEEDED);
+    if (i_FEATURE_AUTO_TP)
+    {
+            g_AutoTpController.Init();
+    }
+    if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
+            && CommonDatacenter::sLOCAL_TERMINAL_TYPE == eTERMINAL_TYPE_XM)
+    {
+        g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
+    }
+    EventSetTimer(1);
+    return(0);
 }
 
 void OnDeinit(const int reason)
 {
-   EventKillTimer();
-   g_MyTerminal.termniate();
-   g_RemoteTerminal.termniate();
-   LOGD("*************** EA FINISH ***************");
+    EventKillTimer();
+    g_AutoTpController.Terminate();
+    LOGD("*************** EA FINISH ***************");
+    return(0);
 }
 
 void OnTimer()
 {
-   if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
-         && CommonDatacenter::sLOCAL_TERMINAL_TYPE== eTERMINAL_TYPE_XM)
-   {
-      g_TpSlController.OnTick();
-   }
-   if (i_FEATURE_AUTO_TP)
-   {
-      g_RemoteTerminal.DoPoll();
-   }
+    if (i_FEATURE_AUTO_PLACE_REMOVE_TP 
+        && CommonDatacenter::sLOCAL_TERMINAL_TYPE == eTERMINAL_TYPE_XM)
+    {
+        g_TpSlController.OnTick();
+    }
+    if (i_FEATURE_AUTO_TP)
+    {
+        g_AutoTpController.OnTimer();
+    }
 }
