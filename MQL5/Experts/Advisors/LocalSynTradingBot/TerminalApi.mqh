@@ -1,134 +1,146 @@
 ﻿#include "Types.mqh"
 #include "Utils.mqh"
-#include <Trade/Trade.mqh>
-
-iPosition DoGetPosition(ulong position_ticket)
+class TerminalAPI
 {
-    iPosition ins;
-    ZeroMemory(ins);
-
-    if(PositionSelectByTicket(position_ticket))
+public:
+    static void DoCloseEA ()
     {
-        ins.position_ticket = position_ticket;
-        ins.symbol          = PositionGetString(POSITION_SYMBOL);
-        ins.position_type   = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-        ins.volume          = PositionGetDouble(POSITION_VOLUME);
-        ins.price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
-        ins.time_open       = (datetime)PositionGetInteger(POSITION_TIME);
-        ins.status          = ePOSITION_STATUS_OPEN;
-    }
-    else
-    {
-        ins.status = ePOSITION_STATUS_CLOSED;
+        LOGD("@@@ Force to Close EA... @@@");
+        ExpertRemove();
     }
 
-    return ins;
-}
-
-double GetTotalAliveVolume()
-{
-   double total_volume = 0.0;
-   int total = PositionsTotal();
-
-   for(int i = 0; i < total; i++)
-   {
-      if(PositionSelectByTicket(PositionGetTicket(i)))
-      {
-         double vol = PositionGetDouble(POSITION_VOLUME);
-         total_volume += vol;
-      }
-   }
-   return total_volume;
-}
-
-void DoGetAllPosition(iPosition &resArr[])
-{
-    int total = PositionsTotal();
-    ArrayResize(resArr, total);
-
-    for(int i = 0; i < total; i++)
+    static void DoShowMessagePopup(string message)
     {
-        ulong ticket = PositionGetTicket(i);
-        if(PositionSelectByTicket(ticket))
+        MessageBox(message, "Message from Remote Terminal", MB_OK | MB_ICONINFORMATION);
+    }
+
+    static int DoGetPositionCount()
+    {
+        return OrdersTotal();
+    }
+    
+    static iPosition DoGetPosition(int ticket)
+    {
+        iPosition ins;
+        ZeroMemory(ins);
+        if(OrderSelect(ticket, SELECT_BY_TICKET))
         {
-            resArr[i].position_ticket = ticket;
-            resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
-            resArr[i].position_type   = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-            resArr[i].status          = ePOSITION_STATUS_OPEN;
-            resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
-
-            resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
-            resArr[i].time_open       = (datetime)PositionGetInteger(POSITION_TIME);
-            resArr[i].open_reason     = (ENUM_POSITION_REASON)PositionGetInteger(POSITION_REASON);
-
-            resArr[i].price_close     = 0.0;
-            resArr[i].time_close      = 0;
-            resArr[i].close_reason    = 0;
+            ins.position_ticket = ticket;
+            ins.symbol          = OrderSymbol();
+            ins.position_type   = OrderType();
+            ins.volume          = OrderLots();
+            ins.price_open      = OrderOpenPrice();
+            ins.status          = ePOSITION_STATUS_OPEN;
         }
         else
         {
-            LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
-            resArr[i].status = ePOSITION_STATUS_UNKNOWN;
+            ins.status = ePOSITION_STATUS_CLOSED;
         }
-    }     
-}
+        return ins;
+    }
 
-bool DoClosePosition(ulong position_ticket)
-{
-    bool res = false;
-    if(PositionSelectByTicket(position_ticket))
+    static double GetTotalAliveVolume()
     {
-        CTrade trade;
-        res = trade.PositionClose(position_ticket);
-        if (res == true)
+        double total_volume = 0.0;
+        int total = OrdersTotal();
+        for(int i = 0; i < total; i++)
         {
-            LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+            if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                if(OrderType() == OP_SELL || OrderType() == OP_BUY)
+                {
+                    total_volume += OrderLots();
+                }
+            }
         }
-        else
+        return total_volume;
+    }
+
+    static void DoGetAllPosition(iPosition &resArr[])
+    {
+        int total = OrdersTotal();
+        ArrayResize(resArr, total);
+        int idx = 0;
+        for(int i = 0; i < total; i++)
         {
-            LOGE("Failed to closs [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+            if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                if(OrderType() == OP_SELL || OrderType() == OP_BUY)
+                {
+                    resArr[idx].position_ticket = OrderTicket();
+                    resArr[idx].symbol          = OrderSymbol();
+                    resArr[idx].position_type   = OrderType();
+                    resArr[idx].status          = ePOSITION_STATUS_OPEN;
+                    resArr[idx].volume          = OrderLots();
+                    resArr[idx].price_open      = OrderOpenPrice();
+                    idx++;
+                }
+            }
         }
     }
-    return res;
-}
 
-bool DoClosePartialPosition(ulong position_ticket, double volume)
-{
-    bool res = false;
-    if(PositionSelectByTicket(position_ticket))
+    static bool DoClosePosition(int position_ticket)
     {
-        CTrade trade;
-        res = trade.PositionClosePartial(position_ticket, volume);
-        if (res == true)
+        bool res = false;
+        if(OrderSelect(position_ticket, SELECT_BY_TICKET))
         {
-            LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL)
+            {
+                double lots = OrderLots();
+                double price = (OrderType() == OP_BUY) ? Bid : Ask;
+                int slippage = 3;
+                res = OrderClose(position_ticket, lots, price, slippage, clrRed);
+                if(res)
+                    LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+                else
+                    LOGE("Failed to close [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+            }
         }
-        else
-        {
-            LOGE("Failed to closs [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
-        }
-
+        return res;
     }
-    return res;
-}
 
-void DoEndAllPositions()
-{
-    CTrade trade;
-    int total = PositionsTotal();
-    while (total > 0)
+    static bool DoClosePartialPosition(int position_ticket, double volume)
     {
-        ulong ticket = PositionGetTicket(0);
-        bool res = trade.PositionClose(ticket);
-        if (res == true)
+        bool res = false;
+        if(OrderSelect(position_ticket, SELECT_BY_TICKET))
         {
-            LOGD("Closed position [ " + IntegerToString(ticket) + " ]");
+            if(OrderType() == OP_BUY || OrderType() == OP_SELL)
+            {
+                double price = (OrderType() == OP_BUY) ? Bid : Ask;
+                int slippage = 3;
+                res = OrderClose(position_ticket, volume, price, slippage, clrRed);
+                if(res)
+                    LOGD("Closed partial position [ " + IntegerToString(position_ticket) + " ]");
+                else
+                    LOGE("Failed to close partial [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+            }
         }
-        else
-        {
-            LOGE("Failed to close [" + IntegerToString(ticket) + "] | Error: " + IntegerToString(GetLastError()));
-            break;
-        }
-        total -= 1;
+        return res;
     }
-}
+
+    static void DoEndAllPositions()
+    {
+        int total = OrdersTotal();
+        for(int i = total - 1; i >= 0; i--)
+        {
+            if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                if(OrderType() <= OP_SELL && OrderSymbol() == Symbol())
+                {
+                    int ticket = OrderTicket();
+                    double lots = OrderLots();
+                    double price = (OrderType() == OP_BUY) ? Bid : Ask;
+                    int slippage = 3;
+                    bool res = OrderClose(ticket, lots, price, slippage, clrRed);
+                    if(res)
+                        LOGD("Closed position [ " + IntegerToString(ticket) + " ]");
+                    else
+                    {
+                        LOGE("Failed to close [" + IntegerToString(ticket) + "] | Error: " + IntegerToString(GetLastError()));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+};

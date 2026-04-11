@@ -1,9 +1,8 @@
-#include <Trade\Trade.mqh>
-
 enum EnumTerminalType {
     eTERMINAL_TYPE_UNKNOWN = 0,
     eTERMINAL_TYPE_XM = 1,
-    eTERMINAL_TYPE_EXNESS = 2
+    eTERMINAL_TYPE_EXNESS = 2,
+    eTERMINAL_TYPE_FPG = 3
 };
 
 enum EnumChangeType
@@ -20,7 +19,7 @@ enum EnumCmdId
     eCMD_ON_CONNECTED,
     eCMD_ON_SLSO,
     eCMD_ON_UPDATE,
-    eCMD_PING_ALIVE,
+    eCMD_PING_A LIVE,
     eCMD_MAX
 };
 
@@ -40,17 +39,11 @@ enum EnumPositionStatus
 
 struct iPosition
 {
-    ulong                position_ticket;
-    ulong                deal_ticket;
+    int                  position_ticket;
     string               symbol;
-    ENUM_POSITION_TYPE   position_type;
+    int                  position_type; // OP_BUY, OP_SELL, ...
     EnumPositionStatus   status;
 
     double               volume;
     double               price_open;
-    double               price_close;
-    datetime             time_open;
-    datetime             time_close;
-    ENUM_POSITION_REASON open_reason;
-    ENUM_DEAL_REASON      close_reason;
 };
