@@ -1,16 +1,8 @@
-#include <Trade\Trade.mqh>
-
 enum EnumTerminalType {
     eTERMINAL_TYPE_UNKNOWN = 0,
     eTERMINAL_TYPE_XM = 1,
-    eTERMINAL_TYPE_EXNESS = 2
-};
-
-enum EnumChangeType
-{
-    eCHANGE_TYPE_UNKNOWN = 0,
-    eCHANGE_TYPE_OTHER,
-    eCHANGE_TYPE_SL,
+    eTERMINAL_TYPE_EXNESS = 2,
+    eTERMINAL_TYPE_FPG = 3
 };
 
 enum EnumCmdId
@@ -31,6 +23,9 @@ enum RemoteConnectionState
     eREMOTE_STATE_CONNECTED,
 };
 
+/*********************************************************
+*   Position info
+**********************************************************/
 enum EnumPositionStatus
 {
     ePOSITION_STATUS_UNKNOWN = 0,    // default value, should not be used
@@ -38,19 +33,27 @@ enum EnumPositionStatus
     ePOSITION_STATUS_CLOSED
 };
 
+enum EnumPositionType
+{
+    ePOSITION_TYPE_UNKNOWN = 0,    // default value, should not be used
+    ePOSITION_TYPE_BUY,
+    ePOSITION_TYPE_SELL
+};
+
+enum EnumChangeType
+{
+    eCHANGE_TYPE_UNKNOWN = 0,
+    eCHANGE_TYPE_OTHER,
+    eCHANGE_TYPE_SL,
+};
+
 struct iPosition
 {
-    ulong                position_ticket;
-    ulong                deal_ticket;
+    int                  position_ticket;
     string               symbol;
-    ENUM_POSITION_TYPE   position_type;
+    EnumPositionType     position_type; // ePOSITION_TYPE_BUY, ePOSITION_TYPE_SELL, ...
     EnumPositionStatus   status;
 
     double               volume;
     double               price_open;
-    double               price_close;
-    datetime             time_open;
-    datetime             time_close;
-    ENUM_POSITION_REASON open_reason;
-    ENUM_DEAL_REASON      close_reason;
 };
