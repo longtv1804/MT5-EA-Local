@@ -1,4 +1,4 @@
-#include <Trade/Trade.mqh>
+#include "TerminalAPI.mqh"
 
 class TpSLController
 {
@@ -122,7 +122,7 @@ public:
                     {
                         PrintFormat("ERROR: Failed to set TP/SL | ticket=%I64u | retcode=%d | comment=%s",
                         ticket, res.retcode, res.comment);
-                        CloseAllPositions();
+                        TerminalAPI::CloseAllPositions();
                         return;
                     }
                     else
@@ -218,36 +218,4 @@ public:
         PrintFormat("INFO: Equity=%.2f | Change=%.2f%%",
         equity_now, percent_change);
     }
-   //+------------------------------------------------------------------+
-
-    // ================= CLOSE ALL USING CTrade =================
-    void CloseAllPositions()
-    {
-        int total = PositionsTotal();
-
-        for (int i = total - 1; i >= 0; i--)
-        {
-            ulong ticket = PositionGetTicket(i);
-            if (!PositionSelectByTicket(ticket))
-                continue;
-
-            bool result = trade.PositionClose(ticket);
-
-            if (!result)
-            {
-                PrintFormat("ERROR: CTrade failed to close | ticket=%I64u | retcode=%d | description=%s",
-                ticket,
-                trade.ResultRetcode(),
-                trade.ResultRetcodeDescription());
-            }
-            else
-            {
-                PrintFormat("INFO: Position closed | ticket=%I64u",
-                ticket);
-            }
-        }
-
-        Print("INFO: ALL POSITIONS CLOSE FINISHED.");
-    }
-    //+------------------------------------------------------------------+
 };
