@@ -1,10 +1,7 @@
 #include "Terminal.mqh"
-#include "LocalTerminal.mqh"
 #include "CommonDatacenter.mqh"
 #include "Types.mqh"
 #include "Utils.mqh"
-
-#include <trade/trade.mqh>
 
 class RemoteTerminal : public Terminal
 {
@@ -39,11 +36,12 @@ private:
         }
     }
 
-    LocalTerminal *m_pLocalTerminal;
+    Terminal *m_pLocalTerminal;
     ulong mLastReadPosition;
 
     /*
-    * lưu giá trị volume đã bị đóng bở SL hoặc StopOut từ phía remote.
+    * lưu giá trị volume đã bị đóng bởi SL hoặc StopOut từ phía remote
+    * và volume còn lại đang mở, để phục vụ cho việc tính toán logic auto TP ở local terminal.
     */
     double m_closedVolumeBySLSO;
     double m_alivePositionsVolume;
@@ -58,14 +56,19 @@ public:
 
     ~RemoteTerminal() {}
 
+    /***********************************************************************
+    *
+    *   các hàm virtual
+    *
+    ***********************************************************************/
     void init(Terminal* remoteTerminal) override
     {
-        m_pLocalTerminal = (LocalTerminal*)remoteTerminal;
+        m_pLocalTerminal = remoteTerminal;
     }
     void termniate() override
     {
     }
-    void ResetTradingSession()
+    void ResetTradingSession() override
     {
         m_closedVolumeBySLSO = 0.0;
         m_alivePositionsVolume = 0.0;
@@ -74,12 +77,16 @@ public:
     {
         return m_alivePositionsVolume;
     }
-
     RemoteConnectionState GetConnectionState()
     {
         return m_state;
     }
 
+    /***********************************************************************
+    *
+    *   Polling functions.
+    *
+    ***********************************************************************/
     void DoPoll()
     {
         if (CommonDatacenter::sFILE_INPUT == "")
@@ -102,7 +109,7 @@ public:
                 // state chuyển từ connected  -> not connect
                 //                 connecting -> not connect
                 // => thực hiện reset file, và resonnecting
-                m_pLocalTerminal.DoReConnecting();
+                m_pLocalTerminal.OnRemote_Disconnected();
 
                 SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
             }
@@ -152,6 +159,7 @@ public:
             string cmdJsonStr[eCMD_MAX] = {""};
 
             FileSeek(handle, mLastReadPosition, SEEK_SET);
+            ulong cmd = 0;
             while(!FileIsEnding(handle))
             {
                 string line = FileReadString(handle);
@@ -159,7 +167,7 @@ public:
                 if(StringLen(line) > 0)
                 {
                     // Parse cmdId:
-                    ulong cmd = ParseIntValue(line, "cmd");
+                    cmd = ParseIntValue(line, "cmd");
 
                     // parse tất cả command và lưu giá trị cuối cùng vào mảng.
                     if (cmd > eCMD_UNKNOWN && cmd < eCMD_MAX)
@@ -178,7 +186,7 @@ public:
             FileClose(handle);
 
             // xử lý từng command nhận được với latest cmd_data
-            for (ulong cmd = 0; cmd < eCMD_MAX; cmd++)
+            for (cmd = 0; cmd < eCMD_MAX; cmd++)
             {
                 if (ExistedFlag[cmd] == true)
                 {
@@ -240,179 +248,5 @@ public:
                 SetConnectionState(eREMOTE_STATE_NOT_CONNECTED);
             }
         }
-    }
-
-    /**********************************************************************************
-    *
-    *  static functions
-    *
-    ***********************************************************************************/
-private:
-
-    // Static function: Parse a single JSON object to iPosition
-    static iPosition ParseJsonToPosition(const string &jsonObj)
-    {
-        iPosition info;
-        ZeroMemory(info);
-        int fpos;
-        fpos = StringFind(jsonObj, "\"position_ticket\":");
-        if(fpos>=0) info.position_ticket = StringToInteger(GetJsonValue(jsonObj, "position_ticket"));
-        fpos = StringFind(jsonObj, "\"symbol\":");
-        if(fpos>=0) info.symbol = GetJsonString(jsonObj, "symbol");
-        fpos = StringFind(jsonObj, "\"position_type\":");
-        if(fpos>=0) info.position_type = (ENUM_POSITION_TYPE)(StringToInteger(GetJsonValue(jsonObj, "position_type")));
-        fpos = StringFind(jsonObj, "\"status\":");
-        if(fpos>=0) info.status = (EnumPositionStatus)(StringToInteger(GetJsonValue(jsonObj, "status")));
-        fpos = StringFind(jsonObj, "\"volume\":");
-        if(fpos>=0) info.volume = StringToDouble(GetJsonValue(jsonObj, "volume"));
-        fpos = StringFind(jsonObj, "\"price_open\":");
-        if(fpos>=0) info.price_open = StringToDouble(GetJsonValue(jsonObj, "price_open"));
-        fpos = StringFind(jsonObj, "\"time_open\":");
-        if(fpos>=0) info.time_open = StringToTime(GetJsonValue(jsonObj, "time_open"));
-        fpos = StringFind(jsonObj, "\"open_reason\":");
-        if(fpos>=0) info.open_reason = (ENUM_POSITION_REASON)StringToInteger(GetJsonValue(jsonObj, "open_reason"));
-        fpos = StringFind(jsonObj, "\"price_close\":");
-        if(fpos>=0) info.price_close = StringToDouble(GetJsonValue(jsonObj, "price_close"));
-        fpos = StringFind(jsonObj, "\"time_close\":");
-        if(fpos>=0) info.time_close = StringToTime(GetJsonValue(jsonObj, "time_close"));
-        fpos = StringFind(jsonObj, "\"close_reason\":");
-        if(fpos>=0) info.close_reason = (ENUM_DEAL_REASON)StringToInteger(GetJsonValue(jsonObj, "close_reason"));
-        return info;
-    }
-
-    // Static function: Parse JSON array to iPosition array
-    static void ParseJsonArrayToPositions(const string &jsonArr, iPosition &positions[])
-    {
-        int pos = 0;
-        while(pos < StringLen(jsonArr))
-        {
-            int obj_start = StringFind(jsonArr, "{", pos);
-            if(obj_start < 0) break;
-            int obj_end = StringFind(jsonArr, "}", obj_start);
-            if(obj_end < 0) break;
-            string obj = StringSubstr(jsonArr, obj_start, obj_end-obj_start+1);
-            iPosition info = ParseJsonToPosition(obj);
-            int n = ArraySize(positions);
-            ArrayResize(positions, n+1);
-            positions[n] = info;
-            pos = obj_end+1;
-        }
-    }
-
-    // lấy giá trị của key trong json string, nếu có.
-    static string ParseJsonValue(const string &json,const string &key)
-    {
-        string pattern="\""+key+"\":";
-        int pos=StringFind(json,pattern);
-        if(pos<0) return "";
-
-        int value_start=pos+StringLen(pattern);
-
-        // skip whitespace
-        while(value_start<StringLen(json))
-        {
-            ushort c=StringGetCharacter(json,value_start);
-            if(c!=' ' && c!='\t' && c!='\n' && c!='\r')
-                break;
-            value_start++;
-        }
-
-        if(value_start>=StringLen(json))
-            return "";
-
-        ushort first=StringGetCharacter(json,value_start);
-
-        // STRING
-        if(first=='"')
-        {
-            value_start++;
-            int value_end=StringFind(json,"\"",value_start);
-            if(value_end>value_start)
-            {
-                return StringSubstr(json,value_start,value_end-value_start);
-            }
-        }
-
-        // OBJECT
-        if(first=='{')
-        {
-            int depth=1;
-            int i=value_start+1;
-
-            while(i<StringLen(json) && depth>0)
-            {
-                ushort c=StringGetCharacter(json,i);
-                if(c=='{') depth++;
-                if(c=='}') depth--;
-                i++;
-            }
-
-            if(depth==0)
-            {
-                return StringSubstr(json,value_start,i-value_start);
-            }
-        }
-
-        // ARRAY
-        if(first=='[')
-        {
-            int depth=1;
-            int i=value_start+1;
-
-            while(i<StringLen(json) && depth>0)
-            {
-                ushort c=StringGetCharacter(json,i);
-                if(c=='[') depth++;
-                if(c==']') depth--;
-                i++;
-            }
-
-            if(depth==0)
-                return StringSubstr(json,value_start,i-value_start);
-        }
-
-        // NUMBER / BOOL / NULL
-        int i=value_start;
-        while(i<StringLen(json))
-        {
-            ushort c=StringGetCharacter(json,i);
-            if(c==',' || c=='}' || c==']')
-                break;
-            i++;
-        }
-
-        if(i>value_start)
-        {
-            return Trim(StringSubstr(json,value_start,i-value_start));
-        }
-
-        return "";
-    }
-
-    static double ParseDoubleValue(const string &json, const string &key)
-    {
-        string value_str = ParseJsonValue(json, key);
-        if (value_str != "")
-        {
-            return StringToDouble(value_str);
-        }
-        else
-        {
-            LOGE("Key not found or value is empty: " + key + " in json: " + json);
-        }
-        return 0.0;
-    }
-    static int ParseIntValue(const string &json, const string &key)
-    {
-        string value_str = ParseJsonValue(json, key);
-        if (value_str != "")
-        {
-            return StringToInteger(value_str);
-        }
-        else
-        {
-            LOGE("Key not found or value is empty: " + key + " in json: " + json);
-        }
-        return 0;
     }
 };
