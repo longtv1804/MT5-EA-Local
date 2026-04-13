@@ -9,7 +9,7 @@
 
 #include "AutoTpController.mqh"
 #include "TpSlController.mqh"
-#include "Utlis.mqh"
+#include "Utils.mqh"
 
 // ================= INPUT =================
 input bool i_FEATURE_AUTO_PLACE_REMOVE_TP = true;     // tool của sangtv
@@ -57,7 +57,7 @@ int OnInit()
         g_TpSlController.Init(iEquity_Og, iPercent_SetTP, iPercent_ClearTP, iVal_TP);
     }
     EventSetTimer(1);
-    return(0);
+    return(INIT_SUCCEEDED);
 }
 
 void OnDeinit(const int reason)
@@ -65,7 +65,6 @@ void OnDeinit(const int reason)
     EventKillTimer();
     g_AutoTpController.Terminate();
     LOGD("*************** EA FINISH ***************");
-    return(0);
 }
 
 void OnTimer()

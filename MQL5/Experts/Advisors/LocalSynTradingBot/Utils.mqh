@@ -44,6 +44,65 @@ string PositionStatusToString(EnumPositionStatus status)
 			return "UNKNOWN";
 	}
 }
+string ToString(EnumTerminalType type)
+{
+	switch(type)
+	{
+		case eTERMINAL_TYPE_XM:
+			return "XM";
+		case eTERMINAL_TYPE_EXNESS:
+			return "EXNESS";
+		case eTERMINAL_TYPE_FPG:
+			return "FPG";
+		case eTERMINAL_TYPE_ULTIMA:
+			return "ULTIMA";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+string ToString(bool val)
+{
+	return val ? "true" : "false";
+}
+
+string ToString(RemoteConnectionState state)
+{
+	switch(state)
+	{
+		case eREMOTE_STATE_NOT_CONNECTED:
+			return "NOT_CONNECTED";
+		case eREMOTE_STATE_WAIT_INPUT:
+			return "WAIT_INPUT";
+		case eREMOTE_STATE_CONNECTING:
+			return "CONNECTING";
+		case eREMOTE_STATE_CONNECTED:
+			return "CONNECTED";
+		case eREMOTE_STATE_RECONNECTING:
+			return "RECONNECTING";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+EnumCloseReason ConvertCloseReason(const ENUM_DEAL_REASON value)
+{
+	switch(value)
+	{
+		case DEAL_REASON_SL:
+			return eCLOSE_REASON_SL;
+		case DEAL_REASON_SO:
+			return eCLOSE_REASON_SO;
+		case DEAL_REASON_TP:
+			return eCLOSE_REASON_TP;
+		case DEAL_REASON_CLIENT:
+		case DEAL_REASON_MOBILE:
+		case DEAL_REASON_WEB:
+			return eCLOSE_REASON_USER;
+		default:
+			return eCLOSE_REASON_OTHER;
+	}
+}
 
 
 //=======================================================================================
@@ -118,7 +177,7 @@ iPosition ParseJsonToPosition(const string jsonObj)
 	fpos = StringFind(jsonObj, "\"symbol\":");
 	if(fpos>=0) info.symbol = GetJsonString(jsonObj, "symbol");
 	fpos = StringFind(jsonObj, "\"position_type\":");
-	if(fpos>=0) info.position_type = StringToInteger(GetJsonValue(jsonObj, "position_type"));
+	if(fpos>=0) info.position_type = (EnumPositionType)StringToInteger(GetJsonValue(jsonObj, "position_type"));
 	fpos = StringFind(jsonObj, "\"status\":");
 	if(fpos>=0) info.status = (EnumPositionStatus)(StringToInteger(GetJsonValue(jsonObj, "status")));
 	fpos = StringFind(jsonObj, "\"volume\":");
