@@ -1,10 +1,10 @@
-#include "Terminal.mqh"
-#include "CommonDatacenter.mqh"
-#include "TerminalApi.mqh"
-#include "Types.mqh"
-#include "Utils.mqh"
+#include "../common/Terminal.mqh"
+#include "../common/CommonDatacenter.mqh"
+#include "../common/TerminalApi.mqh"
+#include "../common/Types.mqh"
+#include "../common/Utils.mqh"
 
-class InOutController
+class CPD_InOutManager
 {
 private:
     Terminal *m_pRemoteTerminal;

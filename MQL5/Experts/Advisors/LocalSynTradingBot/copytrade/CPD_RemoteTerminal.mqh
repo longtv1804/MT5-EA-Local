@@ -1,9 +1,9 @@
-#include "Terminal.mqh"
-#include "CommonDatacenter.mqh"
-#include "Types.mqh"
-#include "Utils.mqh"
+#include "../common/Terminal.mqh"
+#include "../common/CommonDatacenter.mqh"
+#include "../common/Types.mqh"
+#include "../common/Utils.mqh"
 
-class RemoteTerminal : public Terminal
+class CPD_RemoteTerminal : public Terminal
 {
 private:
     /*
@@ -16,13 +16,13 @@ private:
     Terminal* m_pLocalTerminal;
 
 public:
-    RemoteTerminal() : m_pLocalTerminal(NULL)
+    CPD_RemoteTerminal() : m_pLocalTerminal(NULL)
     {
         m_closedVolumeBySLSO = 0.0;
         m_alivePositionsVolume = 0.0;
     }
 
-    ~RemoteTerminal() {}
+    ~CPD_RemoteTerminal() {}
 
     void init(Terminal* localTerminal) 
     {

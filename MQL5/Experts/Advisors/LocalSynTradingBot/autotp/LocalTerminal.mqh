@@ -1,9 +1,9 @@
-#include "Terminal.mqh"
+#include "../common/Terminal.mqh"
+#include "../common/TerminalApi.mqh"
+#include "../common/CommonDatacenter.mqh"
+#include "../common/Types.mqh"
+#include "../common/Utils.mqh"
 #include "InOutController.mqh"
-#include "TerminalApi.mqh"
-#include "CommonDatacenter.mqh"
-#include "Types.mqh"
-#include "Utils.mqh"
 
 class LocalTerminal : public Terminal
 {
