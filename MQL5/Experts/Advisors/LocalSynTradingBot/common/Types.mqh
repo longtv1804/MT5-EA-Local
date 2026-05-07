@@ -11,11 +11,20 @@ enum EnumTerminalType {
 enum EnumCmdId
 {
     eCMD_UNKNOWN,
+
+    // command for auto TP tool
     eCMD_DO_CONNECTING,
     eCMD_ON_CONNECTED,
     eCMD_ON_SLSO,
     eCMD_ON_UPDATE,
     eCMD_PING_ALIVE,
+
+    // command for copy trade
+    eCMD_CPT_UPDATE,
+    eCMD_CPT_POS_ADDED,
+    eCMD_CPT_POS_CLOSED,
+
+    // max numbber
     eCMD_MAX
 };
 
