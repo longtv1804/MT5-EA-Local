@@ -55,11 +55,12 @@ private:
         }
         else if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_CLIENT)
         {
-            // output file:
+            // output file: thử 3 lần randome ID
             string outputFilePath = "";
-            for (int i = 0; i < MAX_CLIENT; i++)
+            for (int i = 0; i < 3; i++)
             {
-                outputFilePath = CPT_CLIENT_OUTPUT_FILE_HEADER + (string)i + ".dat";
+                int id = MathRand();
+                outputFilePath = CPT_CLIENT_OUTPUT_FILE_HEADER + (string)id + ".dat";
                 bool isFileExisted = FileIsExist(outputFilePath, FILE_COMMON);
                 if (isFileExisted == false)
                 {
@@ -68,8 +69,8 @@ private:
             }
             if (outputFilePath == "")
             {
-                LOGD("reach MAX of client, close EA!!!");
-                TerminalAPI::DoShowMessagePopup("reach MAX of client, close EA!!!");
+                LOGD("try 3 time but can not get client ID, close EA!!!");
+                TerminalAPI::DoShowMessagePopup("try 3 time but can not get client ID, close EA!!!");
                 TerminalAPI::DoCloseEA();
                 return false;
             }
@@ -197,13 +198,53 @@ public:
     ***********************************************************************/
 public:
     // for CPT_ServerTerminal
-    int GetClientList(int &arr[])
+    int GetClientList(int &clientIdList[])
     {
-      return 0;
+        string path_pattern = CPT_CLIENT_OUTPUT_FILE_HEADER + "*.dat";
+
+        long handle;
+        string file;
+        int attr = 0;
+
+        ArrayResize(clientIdList, 0);
+
+        handle = FileFindFirst(path_pattern, file, attr);
+
+        if(handle == INVALID_HANDLE)
+            return 0;
+
+        do
+        {
+            // file = CPT_client_123.dat
+            string name = file;
+
+            // remove prefix
+            string prefix = "CPT_client_";
+            string suffix = ".dat";
+
+            if(StringFind(name, prefix) == 0 && StringFind(name, suffix) > 0)
+            {
+                string id_str = StringSubstr(
+                    name,
+                    StringLen(prefix),
+                    StringLen(name) - StringLen(prefix) - StringLen(suffix)
+                );
+
+                int id = (int)StringToInteger(id_str);
+
+                int size = ArraySize(clientIdList);
+                ArrayResize(clientIdList, size + 1);
+                clientIdList[size] = id;
+            }
+        }
+        while(FileFindNext(handle, file));
+
+        FileFindClose(handle);
+        return ArraySize(clientIdList);
     }
 
     // for CPT_ClientTerminal
-    void PollData(string &arr[])
+    void PollData(string &cmdList[])
     {
 
     }
