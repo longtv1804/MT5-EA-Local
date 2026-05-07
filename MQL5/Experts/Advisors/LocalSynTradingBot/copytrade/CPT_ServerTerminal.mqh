@@ -34,7 +34,7 @@ public:
         if (s_pollCount % 5 == 0)
         {
             int currList[];
-            int currNumber = GetClientList(currList);
+            int currNumber = m_pInOutManager.GetClientList(currList);
             bool changed = false;
 
             // check new client then noti update for each
