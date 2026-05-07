@@ -1,5 +1,5 @@
 #include "Types.mqh"
-#include "Constanst.mqh"
+#include "Constants.mqh"
 #include "Utils.mqh"
 
 class Terminal

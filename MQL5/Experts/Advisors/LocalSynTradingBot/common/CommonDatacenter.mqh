@@ -13,6 +13,8 @@ public:
 
 	static bool FEATURE_ENABLE_AUTO_TP_SL;
 	static bool FEATURE_ENABLE_LOCAL_SYN;
+
+    static EnumCopyTradeMode s_copyTradeMode;
 };
 
 // Định nghĩa các biến static bên ngoài class
@@ -21,3 +23,5 @@ string CommonDatacenter::sFILE_OUTPUT = "";
 string CommonDatacenter::sFILE_INPUT = "";
 bool CommonDatacenter::FEATURE_ENABLE_AUTO_TP_SL = true;
 bool CommonDatacenter::FEATURE_ENABLE_LOCAL_SYN = true;
+
+EnumCopyTradeMode CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;

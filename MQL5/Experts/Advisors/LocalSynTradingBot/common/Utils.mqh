@@ -104,6 +104,18 @@ EnumCloseReason ConvertCloseReason(const ENUM_DEAL_REASON value)
 	}
 }
 
+string ToString(EnumCopyTradeMode mode)
+{
+	switch(mode)
+	{
+		case eCPT_MODE_SERVER:
+			return "SERVER";
+		case eCPT_MODE_CLIENT:
+			return "CLIENT";
+		default:
+			return "UNKNOWN";
+	}
+}
 
 //=======================================================================================
 //
@@ -318,7 +330,7 @@ int ParseIntValue(const string json, const string key)
 	string value_str = ParseJsonValue(json, key);
 	if (value_str != "")
 	{
-		return StringToInteger(value_str);
+		return (int)StringToInteger(value_str);
 	}
 	else
 	{

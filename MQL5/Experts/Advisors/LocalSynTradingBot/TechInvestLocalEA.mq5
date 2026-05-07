@@ -37,6 +37,21 @@ int OnInit()
 {
     LOGD("*************** LOCAL EA COPY TRADING INIT ****************");
 
+    if (i_TerminalMode == eCPT_MODE_UNKNOWN)
+    {
+        TerminalAPI::DoShowMessagePopup("You haven't set the CopyTrade mode!!");
+        LOGE("can not detect the brocker");
+        return(INIT_FAILED);
+    }
+
+    TerminalAPI::DetectBroker();
+    if (CommonDatacenter::sLOCAL_TERMINAL_TYPE  == eTERMINAL_TYPE_UNKNOWN)
+    {
+        TerminalAPI::DoShowMessagePopup("can not detect the brocker!!!");
+        LOGE("can not detect the brocker");
+        return(INIT_FAILED);
+    }
+
     g_CopyTradeController.Init(i_TerminalMode, i_Weight);
 
     EventSetTimer(1);

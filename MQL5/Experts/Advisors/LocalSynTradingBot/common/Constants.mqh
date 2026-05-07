@@ -9,3 +9,7 @@ string BROKER_NAME_FPG = "Fortune Prime Global ltd";
 string BROKER_NAME_ULTIMA = "Ultima Markets Ltd";
 string BROKER_NAME_PEPRE = "Pepperstone Group Limited";
 string BROKER_NAME_VANTAGE = "Vantage Global Prime Pty Ltd";
+
+int MAX_CLIENT = 5;
+string CPT_CLIENT_OUTPUT_FILE_HEADER    = FOLDER_EA_DIR + "\\CPT_client";
+string CPT_SERVER_OUTPUT_FILE_PATH      = FOLDER_EA_DIR + "\\CPT_server.dat";

@@ -1,51 +1,57 @@
 #include "../common/Utils.mqh"
-#include "CPD_LocalTerminal.mqh"
-#include "CPD_RemoteTerminal.mqh"
-#include "CPD_InOutManager.mqh"
-
+#include "../common/Types.mqh"
+#include "../common/CommonDatacenter.mqh"
+#include "CPT_LocalTerminal.mqh"
+#include "CPT_ServerTerminal.mqh"
+#include "CPT_ClientTerminal.mqh"
+#include "CPT_InOutManager.mqh"
 class CopyTradeController
 {
-    CPD_LocalTerminal m_MyTerminal;
-    CPD_RemoteTerminal m_RemoteTerminal;
-    CPD_InOutManager m_InOutManager;
+    CPT_LocalTerminal* m_MyTerminal;
+    CPT_InOutManager mInOutMgr;
 
 public:
     CopyTradeController()
     {
     }
+
     ~CopyTradeController()
     {
         Terminate();
+        if (m_MyTerminal)
+        {
+            delete m_MyTerminal;
+            m_MyTerminal = NULL;
+        }
     }
 
-    void Init (int terminal_mode, double weight)
+    void Init(int terminal_mode, double weight)
     {
-        m_MyTerminal.init(&m_InOutManager, &m_RemoteTerminal);
-        m_RemoteTerminal.init(&m_MyTerminal);
-        m_InOutManager.init(&m_RemoteTerminal, &m_MyTerminal);
+        CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
+        if (terminal_mode == eCPT_MODE_SERVER)
+        {
+            CommonDatacenter::s_copyTradeMode = eCPT_MODE_SERVER;
+            m_MyTerminal = new CPT_ServerTerminal();
+        }
+        else
+        {
+            CommonDatacenter::s_copyTradeMode = eCPT_MODE_CLIENT;
+            m_MyTerminal = new CPT_ClientTerminal();
+        }
+
+        m_MyTerminal.init(&mInOutMgr);
+        mInOutMgr.init();
     }
 
     void Terminate()
     {
-        m_MyTerminal.terminate();
-        m_RemoteTerminal.terminate();
-        m_InOutManager.terminate();
+        m_MyTerminal.Terminate();
+        mInOutMgr.Terminate();
     }
 
     void OnTimer()
     {
-        if (m_InOutManager.GetState() == eREMOTE_STATE_RECONNECTING)
-        {
-            m_InOutManager.DoReconnecting();
-        }
-        else if (m_InOutManager.GetState() == eREMOTE_STATE_WAIT_INPUT)
-        {
-            m_InOutManager.DoWaitInput();
-        }
-        else
-        {
-            m_InOutManager.DoPoll();
-        }
+        m_MyTerminal.DoPoll();
     }
 
     void OnLocal_OnTradeTransaction(const MqlTradeTransaction& trans,

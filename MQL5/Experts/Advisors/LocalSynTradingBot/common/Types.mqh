@@ -28,6 +28,13 @@ enum RemoteConnectionState
     eREMOTE_STATE_RECONNECTING
 };
 
+enum EnumCopyTradeMode
+{
+    eCPT_MODE_UNKNOWN,
+    eCPT_MODE_SERVER,
+    eCPT_MODE_CLIENT
+};
+
 /*********************************************************
 *   Position info
 **********************************************************/
@@ -57,7 +64,7 @@ enum EnumCloseReason
 
 struct iPosition
 {
-    ulong                  position_ticket;
+    ulong                position_ticket;
     string               symbol;
     EnumPositionType     position_type; // ePOSITION_TYPE_BUY, ePOSITION_TYPE_SELL, ...
     EnumPositionStatus   status;

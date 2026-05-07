@@ -1,5 +1,7 @@
 ﻿#include "Types.mqh"
 #include "Utils.mqh"
+#include "Constants.mqh"
+#include "CommonDataCenter.mqh"
 #include <Trade/Trade.mqh>
 
 class TerminalAPI
@@ -14,6 +16,43 @@ public:
     static void DoShowMessagePopup(string message)
     {
         MessageBox(message, "EA Message", MB_OK | MB_ICONINFORMATION);
+    }
+
+    static void DetectBroker()
+    {
+        string server_name = AccountInfoString(ACCOUNT_SERVER);
+        string broker_name = AccountInfoString(ACCOUNT_COMPANY);
+        string accountName = AccountInfoString(ACCOUNT_NAME);
+        StringToLower(server_name);
+        LOGD("server_name=[" + server_name + "], broker_name=[" + broker_name + "], accountName=[" + accountName + "]");
+        if (broker_name == BROKER_NAME_FPG)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_FPG;
+        }
+        else if (broker_name == BROKER_NAME_ULTIMA)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_ULTIMA;
+        }
+        else if (broker_name == BROKER_NAME_PEPRE)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_PEPRE;
+        }
+        else if (broker_name == BROKER_NAME_VANTAGE)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_VANTAGE;
+        }
+        else if(StringFind(server_name, "exness") >= 0)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_EXNESS;
+        }
+        else if(StringFind(server_name, "xmglobal") >= 0)
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_XM;
+        }
+        else
+        {
+            CommonDatacenter::sLOCAL_TERMINAL_TYPE  = eTERMINAL_TYPE_UNKNOWN;
+        }
     }
 
     static iPosition DoGetPosition(ulong position_ticket)
