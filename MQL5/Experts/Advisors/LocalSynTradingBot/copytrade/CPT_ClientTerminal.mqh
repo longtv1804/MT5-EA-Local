@@ -149,9 +149,9 @@ private:
     {
         // tìm bản tin update mà server gửi cho chính xác client-id
         // bỏ qua những cmd khác.
-		int size = ArraySize(cmdList);
-		for(int i = 0; i < size; i++)
-		{
+        int size = ArraySize(cmdList);
+        for(int i = 0; i < size; i++)
+        {
             string cmdStr = cmdList[i];
             int cmd = ParseIntValue(cmdStr, "cmd");
             // ignore các cmd trong  state connecting
@@ -163,6 +163,7 @@ private:
             int client_id =  ParseIntValue(cmdStr, "to_client");
             if (client_id == m_pInOutManager.GetId())
             {
+                LOGD("cmd UPDATE detected");
                 string PositonArrayStr = ParseJsonValue(cmdStr, "curr_positions");
                 iPosition positions[];
                 ParseJsonArrayToPositions(PositonArrayStr, positions);
@@ -172,7 +173,10 @@ private:
                     // tạm thời sẽ close EA trong trường hợp này
                     LOGD("Server đã có connection -> close EA");
                     TerminalAPI::DoCloseEA();
+                    return;
                 }
+
+                SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
             }
         }
     }
