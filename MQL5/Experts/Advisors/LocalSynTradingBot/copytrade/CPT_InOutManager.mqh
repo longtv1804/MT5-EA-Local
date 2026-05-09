@@ -9,25 +9,9 @@ class CPT_InOutManager
 private:
 	string mInputFile;
 	string mOutputFile;
+    int mOutputFileId;
 
     ulong mLastReadPosition;
-    ulong mWaitingReconnectingCount;
-
-    RemoteConnectionState m_state;
-    void SetConnectionState(RemoteConnectionState newState)
-    {
-        if (m_state != newState)
-        {
-            m_state = newState;
-            LOGD("Connection state change: " + (string)m_state + "-" + ToString(m_state));
-            
-            // reset vị trí đọc file.
-            if (m_state != eREMOTE_STATE_CONNECTING && m_state != eREMOTE_STATE_CONNECTED)
-            {
-                mLastReadPosition = 0;
-            }
-        }
-    }
 
     /**********************************************************************************
     *
@@ -55,15 +39,16 @@ private:
         }
         else if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_CLIENT)
         {
-            // output file: thử 3 lần randome ID
+            // output file: thử 5 lần randome ID
             string outputFilePath = "";
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 5; i++)
             {
                 int id = MathRand();
                 outputFilePath = CPT_CLIENT_OUTPUT_FILE_HEADER + (string)id + ".dat";
                 bool isFileExisted = FileIsExist(outputFilePath, FILE_COMMON);
                 if (isFileExisted == false)
                 {
+                    mOutputFileId = id;
                     break;
                 }
             }
@@ -112,15 +97,17 @@ private:
 
     void RemoveOutputFile()
     {
-        if(mOutputFile == "" && FileIsExist(mOutputFile, FILE_COMMON))
+        if(mOutputFile != "" && FileIsExist(mOutputFile, FILE_COMMON))
         {
-            FileDelete(CommonDatacenter::sFILE_OUTPUT, FILE_COMMON);
-            LOGD("Removed output file: " + CommonDatacenter::sFILE_OUTPUT);
+            FileDelete(mOutputFile, FILE_COMMON);
+            LOGD("Removed output file: " + mOutputFile);
         }
     }
 
 public:
-    void init()
+    // với server thì init ngay khi khởi tạo
+    // với client thì init sau khi detect server file
+    void Init()
     {  
         // tạo thư mục để chắc chắn thư mục tồn tại
         if (!FileIsExist(FOLDER_EA_DIR, FILE_COMMON))
@@ -133,30 +120,20 @@ public:
         if (res)
         {
             res = CreateOutputFile();
-            if (res)
-            {
-                if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_SERVER)
-                {
-                    SetConnectionState(eREMOTE_STATE_CONNECTED);
-                }
-                else if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_CLIENT)
-                {
-                    SetConnectionState(eREMOTE_STATE_WAIT_INPUT);
-                }
-                else
-                {
-                    // vì đã init file thành công nên case else này sẽ ko vào
-                }
-            }
+        }
+        if (!res)
+        {
+            LOGE("ERROR when init filepath or CreateOutputFile");
         }
     }
+
+    // server: terminate khi close EA
+    // client: terminate khi mà mất kết nối server hoặc close EA
     void Terminate()
     {
         RemoveOutputFile();
-    }
-    RemoteConnectionState GetState()
-    {
-        return m_state;
+        mOutputFileId = 0;
+        mLastReadPosition = 0;
     }
 
     /**********************************************************************************
@@ -167,18 +144,13 @@ public:
 public:
     void SendData(string jsonData)
     {
-        if (m_state != eREMOTE_STATE_CONNECTED && m_state != eREMOTE_STATE_CONNECTING)
+        if (mOutputFile == "")
         {
-            LOGE("can not send data, current state: " + ToString(m_state));
-            return;
-        }
-        if (CommonDatacenter::sFILE_OUTPUT == "")
-        {
-            LOGE("sFILE_OUTPUT is empty");
+            LOGE("InputFile is not detected");
             return;
         }
 
-        int handle = FileOpen(CommonDatacenter::sFILE_OUTPUT, FILE_WRITE|FILE_READ|FILE_TXT|FILE_SHARE_READ|FILE_ANSI|FILE_COMMON);
+        int handle = FileOpen(mOutputFile, FILE_WRITE|FILE_READ|FILE_TXT|FILE_SHARE_READ|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
             FileSeek(handle, 0, SEEK_END);
@@ -188,7 +160,7 @@ public:
         }
         else
         {
-            LOGE("Failed to open file: " + CommonDatacenter::sFILE_OUTPUT);
+            LOGE("Failed to open file: " + mOutputFile);
         }
     }
     /***********************************************************************
@@ -197,7 +169,6 @@ public:
     *
     ***********************************************************************/
 public:
-    // for CPT_ServerTerminal
     int GetClientList(int &clientIdList[])
     {
         string path_pattern = CPT_CLIENT_OUTPUT_FILE_HEADER + "*.dat";
@@ -211,7 +182,9 @@ public:
         handle = FileFindFirst(path_pattern, file, attr);
 
         if(handle == INVALID_HANDLE)
+        {
             return 0;
+        }
 
         do
         {
@@ -243,9 +216,87 @@ public:
         return ArraySize(clientIdList);
     }
 
-    // for CPT_ClientTerminal
-    void PollData(string &cmdList[])
+    /***********************************************************************
+    *
+    *   for CPT_ClientTerminal
+    *
+    ***********************************************************************/
+public:
+    void SeekToEndInputFile()
     {
+        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
+        if(handle != INVALID_HANDLE)
+        {
+            // Check file size before seeking
+            // nếu vị trí đọc cũ lớn hơn file, thì reset về 0 và đọc lại từ đầu.
+            FileSeek(handle, 0, SEEK_END);
+            mLastReadPosition = FileTell(handle);
+        }
+        else
+        {
+           LOGE("Can not open file (" + mInputFile + ")"); 
+        }
+    }
 
+    // return true if the file is existed
+    bool CheckInputFile()
+    {
+        if (mInputFile == "")
+        {
+            return false;
+        }
+        bool isInputExisted = FileIsExist(mInputFile, FILE_COMMON);
+        if (isInputExisted == false)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    // fetch data from input file
+    int PollData(string &cmdList[])
+    {
+        bool isInputExisted = FileIsExist(mInputFile, FILE_COMMON);
+        if (isInputExisted == false)
+        {
+            return 0;
+        }
+
+        int dataLineCount = 0;
+        ArrayResize(cmdList, dataLineCount);
+
+        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
+        if(handle != INVALID_HANDLE)
+        {
+            // Check file size before seeking
+            // nếu vị trí đọc cũ lớn hơn file, thì reset về 0 và đọc lại từ đầu.
+            FileSeek(handle, 0, SEEK_END);
+            ulong end_pos = FileTell(handle);
+            if (end_pos < mLastReadPosition)
+            {
+                LOGD("File size (" + (string)end_pos + ") is less than last read position (" + (string)mLastReadPosition + "). Resetting read position.");
+                mLastReadPosition = 0;
+            }
+
+            FileSeek(handle, mLastReadPosition, SEEK_SET);
+            while(!FileIsEnding(handle))
+            {
+                string line = FileReadString(handle);
+                if(StringLen(line) > 0)
+                {
+                    
+                    ArrayResize(cmdList, dataLineCount + 1);
+                    cmdList[dataLineCount] = line;
+                    dataLineCount += 1;
+                }
+            }
+            mLastReadPosition = FileTell(handle);
+            FileClose(handle);
+        }
+        else
+        {
+           LOGE("Can not open file (" + mInputFile + ")"); 
+        }
+        return dataLineCount;
     }
 };

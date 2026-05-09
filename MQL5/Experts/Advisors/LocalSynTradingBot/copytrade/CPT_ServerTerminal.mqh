@@ -18,7 +18,10 @@ public:
         mClientNumber = 0;
     }
 
-    void OnPositionAdded(iPosition& newPos) {}
+    void OnPositionAdded(iPosition& newPos)
+    {
+        
+    }
     void OnPositionClosed(iPosition& newPos) {}
 
     void Terminate() override
