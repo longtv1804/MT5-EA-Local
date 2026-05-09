@@ -36,11 +36,11 @@ public:
         else
         {
             CommonDatacenter::s_copyTradeMode = eCPT_MODE_CLIENT;
-            m_MyTerminal = new CPT_ClientTerminal();
+            m_MyTerminal = new CPT_ClientTerminal(weight);
         }
 
-        m_MyTerminal.init(&mInOutMgr);
-        mInOutMgr.init();
+        m_MyTerminal.Init(&mInOutMgr);
+        mInOutMgr.Init();
     }
 
     void Terminate()

@@ -14,10 +14,10 @@ private:
         TerminalAPI::DoGetAllPosition(currentPositions);
 
         JsonBuilder builder;
-        builder.Set("cmd", eCMD_CPT_UPDATE);
-        builder.Set("to_client", client_id);
+        builder.Set("cmd", (string)eCMD_CPT_UPDATE);
+        builder.Set("to_client", (string)client_id);
         builder.Set("curr_positions", currentPositions);
-        
+
         m_pInOutManager.SendData(builder.Build());
     }
 
@@ -29,9 +29,21 @@ public:
 
     void OnPositionAdded(iPosition& newPos)
     {
+        JsonBuilder builder;
+        builder.Set("cmd", (string)eCMD_CPT_POS_ADDED);
+        builder.Set("positon_info", newPos);
         
+        m_pInOutManager.SendData(builder.Build());
     }
-    void OnPositionClosed(iPosition& newPos) {}
+
+    void OnPositionClosed(iPosition& closedPos)
+    {
+        JsonBuilder builder;
+        builder.Set("cmd", (string)eCMD_CPT_POS_CLOSED);
+        builder.Set("positon_info", closedPos);
+        
+        m_pInOutManager.SendData(builder.Build());
+    }
 
     void Terminate() override
     {

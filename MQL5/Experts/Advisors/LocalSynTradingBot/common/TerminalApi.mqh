@@ -203,4 +203,17 @@ public:
         }
     }
 
+    static void DoOpenNowPosition(double lot)
+    {
+        CTrade trade;
+        bool ok = trade.Buy(lot);
+        if(ok)
+        {
+            LOGD("BUY opened");
+        }
+        else
+        {
+            LOGD("Error: " + (string)GetLastError());
+        }
+    }
 };

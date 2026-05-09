@@ -23,20 +23,20 @@ public:
 		mJsonData[size] = text;
 	}
 
-	void Set(string key, int value)
-	{
-		Set(key, (string)value);
-	}
+	// void Set(string key, int value)
+	// {
+	// 	Set(key, (string)value);
+	// }
 
-	void Set(string key, long value)
-	{
-		Set(key, (string)value);
-	}
+	// void Set(string key, long value)
+	// {
+	// 	Set(key, (string)value);
+	// }
 
-	void Set(string key, double value)
-	{
-		Set(key, (string)value);
-	}
+	// void Set(string key, double value)
+	// {
+	// 	Set(key, (string)value);
+	// }
 
 	void Set(string key, iPosition& pos)
 	{

@@ -3,10 +3,14 @@
 
 class CPT_ClientTerminal : public CPT_LocalTerminal
 {
+private:
+    double mWeigthNumber;
+
 public:
-    CPT_ClientTerminal() : CPT_LocalTerminal() 
+    CPT_ClientTerminal(double weight) : CPT_LocalTerminal() 
     {
         m_state = eSERVER_CONN_STATE_UNKNOWN;
+        mWeigthNumber = weight;
     }
 
     void OnPositionAdded(iPosition& newPos) {}
@@ -183,12 +187,42 @@ private:
 
     void Connected_HandleServerCommands(string &cmdList[])
     {
-
+        int size = ArraySize(cmdList);
+        for(int i = 0; i < size; i++)
+        {
+            string cmdStr = cmdList[i];
+            int cmd = ParseIntValue(cmdStr, "cmd");
+            switch (cmd)
+            {
+                case eCMD_CPT_UPDATE:
+                {
+                    break;
+                }
+                case eCMD_CPT_POS_ADDED:
+                {
+                    string PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    iPosition newPos = ParseJsonToPosition(PositonJsonStr);
+                    OnServer_NewPositionAdded(newPos);
+                    break;
+                }
+                case eCMD_CPT_POS_CLOSED:
+                {
+                    string PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    iPosition closedPos = ParseJsonToPosition(PositonJsonStr);
+                    OnServer_NewPositionAdded(closedPos); 
+                    break;
+                }
+                default:
+                    // ignore các cmd khác
+                    break;
+            }
+        }
     }
 
     void OnServer_NewPositionAdded(iPosition &newPos)
     {
-
+        double lot = mWeigthNumber * newPos.volume;
+        TerminalAPI::DoOpenNowPosition(lot);
     }
 
     void OnServer_PositionClosed(iPosition &closedPos)

@@ -20,7 +20,7 @@ public:
 
     ~CPT_LocalTerminal() {}
 
-    void init(CPT_InOutManager* inOutController)
+    void Init(CPT_InOutManager* inOutController)
     {
         m_pInOutManager = inOutController;
     }
