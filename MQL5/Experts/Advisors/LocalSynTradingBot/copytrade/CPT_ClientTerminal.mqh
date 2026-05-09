@@ -147,7 +147,34 @@ public:
 private:
     void Connecting_HandleServerCommands(string &cmdList[])
     {
-
+        // tìm bản tin update mà server gửi cho chính xác client-id
+        // bỏ qua những cmd khác.
+		int size = ArraySize(cmdList);
+		for(int i = 0; i < size; i++)
+		{
+            string cmdStr = cmdList[i];
+            int cmd = ParseIntValue(cmdStr, "cmd");
+            // ignore các cmd trong  state connecting
+            if (cmd != eCMD_CPT_UPDATE)
+            {
+                continue;
+            }
+            // chỉ nhận thông tin của server gửi cho client với id chính xác.
+            int client_id =  ParseIntValue(cmdStr, "to_client");
+            if (client_id == m_pInOutManager.GetId())
+            {
+                string PositonArrayStr = ParseJsonValue(cmdStr, "curr_positions");
+                iPosition positions[];
+                ParseJsonArrayToPositions(PositonArrayStr, positions);
+                if (ArraySize(positions) > 0)
+                {
+                    // TODO: update logic xác định session sau
+                    // tạm thời sẽ close EA trong trường hợp này
+                    LOGD("Server đã có connection -> close EA");
+                    TerminalAPI::DoCloseEA();
+                }
+            }
+        }
     }
 
     void Connected_HandleServerCommands(string &cmdList[])

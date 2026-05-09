@@ -1,4 +1,5 @@
 #include "../common/Types.mqh"
+#include "../common/JsonBuilder.mqh"
 #include "CPT_LocalTerminal.mqh"
 
 class CPT_ServerTerminal : public CPT_LocalTerminal
@@ -9,7 +10,15 @@ private:
 
     void SendUpdateDataToClient(int client_id)
     {
+        iPosition currentPositions[];
+        TerminalAPI::DoGetAllPosition(currentPositions);
 
+        JsonBuilder builder;
+        builder.Set("cmd", eCMD_CPT_UPDATE);
+        builder.Set("to_client", client_id);
+        builder.Set("curr_positions", currentPositions);
+        
+        m_pInOutManager.SendData(builder.Build());
     }
 
 public:
