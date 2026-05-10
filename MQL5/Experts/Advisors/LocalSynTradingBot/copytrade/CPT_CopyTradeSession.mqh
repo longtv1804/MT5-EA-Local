@@ -2,10 +2,12 @@
 #include <Trade/Trade.mqh>
 #include "../common/JsonBuilder.mqh"
 #include "../common/Utils.mqh"
+#include "../common/Types.mqh"
 #include "../common/Constants.mqh"
 
 class CPT_CopyTradeSession
 {
+    EnumCopyTradeMode mCptMode;
     int mSessionId;
     double mWeight;
     // lưu giá trị position_ticket của server ở vị trí chẵn 0, 2, 4..., 
@@ -46,7 +48,13 @@ class CPT_CopyTradeSession
 
 public:
     CPT_CopyTradeSession() {}
-    
+    CPT_CopyTradeSession(EnumCopyTradeMode mode, int id, int weight) 
+    {
+        mCptMode = mode;
+        mSessionId = id;
+        mWeight = weight;
+    }
+
     void SetSessionId(int id)
     {
         mSessionId = id;
@@ -67,6 +75,16 @@ public:
         return mWeight;
     }
 
+    void SetMode(EnumCopyTradeMode mode)
+    {
+        mCptMode = mode;
+    }
+    
+    void GetMode()
+    {
+        return mCptMode;
+    }
+
     void LoadPreviousSession()
     {
         string filePath = GetFilePath();
@@ -83,6 +101,7 @@ public:
             {
                 jsonStr += FileReadString(handle);
             }
+            mCptMode = (EnumCopyTradeMode)ParseIntValue(jsonStr, "cpt_mode");
             mSessionId = ParseIntValue(jsonStr, "session_id");
             mWeight = ParseDoubleValue(jsonStr, "weight");
             string arrStr = ParseJsonValue(jsonStr, "trade_data");
@@ -118,6 +137,7 @@ public:
             return;
         }
         JsonBuilder builder;
+        builder.Set("cpt_mode", (string)mCptMode);
         builder.Set("session_id", (string)mSessionId);
         builder.Set("weight", (string)mWeight);
 
