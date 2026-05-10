@@ -79,8 +79,8 @@ public:
     {
         mCptMode = mode;
     }
-    
-    void GetMode()
+
+    EnumCopyTradeMode GetMode()
     {
         return mCptMode;
     }
@@ -192,6 +192,51 @@ public:
                 }
                 ArrayResize(mTradingMap, size - 2);
                 break;
+            }
+        }
+    }
+
+    void Compare(iPosition &posArr[], ulong &newPositions[], ulong &closedPositions[])
+    {
+        int curPosNum = ArraySize(posArr);
+        int mapSize = ArraySize(mTradingMap);
+        // xác định các position mới
+        for (int i = 0; i < curPosNum; i++)
+        {
+            bool isExisted = false;
+            for (int j = 0; j < mapSize; j += 2)
+            {
+                if (posArr[i].position_ticket == mTradingMap[j])
+                {
+                    isExisted = true;
+                    break;
+                }
+            }
+            if (isExisted == false)
+            {
+                int size = ArraySize(newPositions);
+                ArrayResize(newPositions, size + 1);
+                newPositions[size] = posArr[i].position_ticket;
+            }
+        }
+
+        // xác định các position bị closed:
+        for (int i = 0; i < mapSize; i += 2)
+        {
+            bool isExisted = false;
+            for (int j = 0; j < curPosNum; j++)
+            {
+                if (mTradingMap[i] == posArr[j].position_ticket)
+                {
+                    isExisted = true;
+                    break;
+                }
+            }
+            if (isExisted == false)
+            {
+                int size = ArraySize(closedPositions);
+                ArrayResize(closedPositions, size + 1);
+                closedPositions[size] = mTradingMap[i];
             }
         }
     }
