@@ -1,25 +1,108 @@
 #include "../common/Types.mqh"
 #include "CPT_LocalTerminal.mqh"
+#include "CPT_CopyTradeSession.mqh"
 
 class CPT_ClientTerminal : public CPT_LocalTerminal
 {
 private:
-    double mWeigthNumber;
+    CPT_CopyTradeSession mSession;
 
 public:
-    CPT_ClientTerminal(double weight) : CPT_LocalTerminal() 
+    CPT_ClientTerminal(double weight) 
+    :   CPT_LocalTerminal(),
+        mSession(eCPT_MODE_SERVER, 0, weight) 
     {
         m_state = eSERVER_CONN_STATE_UNKNOWN;
-        mWeigthNumber = weight;
     }
 
     void OnPositionAdded(iPosition& newPos) {}
     void OnPositionClosed(iPosition& newPos) {}
 
+    /*
+    *   init client:
+    *   + thực hiện load session info trước đó
+    *   + thực hiện kiểm tra:
+    *       1, client -> client: chỉ init khi ko có pos nào đang chạy hoặc các pos đều thuộc session cũ.
+    *       2, server -> client: chỉ init khi ko có pos nào.
+    *       3, unkown -> client: chỉ init khi ko có pos nào.
+    */
+    bool Init(CPT_InOutManager* inOutController) override
+    {
+        CPT_LocalTerminal::Init(inOutController);
+
+        // 1: load previous session và kiểm tra
+        CPT_CopyTradeSession previousSession();
+        previousSession.LoadPreviousSession();
+
+        iPosition posArr[];
+        TerminalAPI::DoGetAllPosition(posArr);
+        ulong closedPosition[];
+        ulong newPosition[];
+        previousSession.Compare(posArr, newPosition, closedPosition);
+        int currentPosNum = ArraySize(posArr);
+        int closedPosNum  = ArraySize(closedPosition);
+        int newPosNum     = ArraySize(newPosition);
+        LOGD("previous mode=" + ToString(previousSession.GetMode()) + 
+                                " previousWeight=" + (string)previousSession.GetWeight() +
+                                " currentWeight=" + (string)mSession.GetWeight() +
+                                " currentPosNum=" + (string)currentPosNum + 
+                                " closedPosNum=" + (string)closedPosNum + 
+                                " newPosNum=" + (string)newPosNum);
+        bool res = true;
+        // 1: client -> client
+        if (previousSession.GetMode() == eCPT_MODE_CLIENT)
+        {
+            // không có position nào đang chạy
+            if (currentPosNum == 0)
+            {
+                // do nothing: chờ update session id từ server
+            }
+            // ko có pos bị closed + ko có pos mới -> vẫn là session cũ đang chạy
+            else if (closedPosNum == 0 && newPosNum == 0)
+            {
+                if (mSession.GetWeight() == previousSession.GetWeigth())
+                {
+                    mSession.SetSessionId(previousSession.GetSessionId());
+                    previousSession.CopyTradingMap(mSession);
+                }
+                else
+                {
+                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: \nSame previous session but weith is different");
+                    res = false;
+                }
+            }
+            else
+            {
+                TerminalAPI::DoShowMessagePopup("ERROR in INIT Client!!!");
+                res = false;
+            }
+        }
+        // 2: server -> client
+        // 3: ko detect dc mode trc đó
+        else
+        {
+            if (currentPosNum > 0)
+            {
+                TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: \nclient đang có sẵn các Position!");
+                res = false;
+            }
+            else
+            {
+                 // do nothing: chờ update session id từ server
+            }
+        }
+        return res;
+    }
+
     void Terminate() override
     {
-        
+        int copyTradePosNum = mSession.GetCptPositionNumber();
+        if (copyTradePosNum > 0)
+        {
+            mSession.SaveSession();
+        }
     }
+
     /**********************************************************************************
     *
     *  quản lý connection với server
@@ -88,6 +171,11 @@ private:
         SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
     }
 
+    /**********************************************************************************
+    *
+    *  Polling function: đọc file input và chuyển tới hàm xử lý tương ứng
+    *
+    ***********************************************************************************/
 public:
     void DoPoll() override
     {
@@ -227,6 +315,5 @@ private:
 
     void OnServer_PositionClosed(iPosition &closedPos)
     {
-
     }
 };
