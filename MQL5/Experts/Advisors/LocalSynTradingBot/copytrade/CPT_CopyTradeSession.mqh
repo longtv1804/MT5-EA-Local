@@ -26,7 +26,7 @@ class CPT_CopyTradeSession
         return text;
     }
 
-    string GetFilePath()
+    static string GetFilePath()
     {
         string server_name = AccountInfoString(ACCOUNT_SERVER);
         string broker_name = AccountInfoString(ACCOUNT_COMPANY);
@@ -37,7 +37,7 @@ class CPT_CopyTradeSession
         return FOLDER_EA_DIR + "\\CPT_DATA\\" + broker_name + "_" + server_name + "_" + accountName + ".dat";
     }
 
-    void CreateDataFolder()
+    static void CreateDataFolder()
     {
         // tạo thư mục để chắc chắn thư mục tồn tại
         if (!FileIsExist(FOLDER_EA_DIR + "\\CPT_DATA\\", FILE_COMMON))
@@ -46,9 +46,14 @@ class CPT_CopyTradeSession
         }
     }
 
+    /**********************************************************************************
+    *
+    *  contructor and get/set function
+    *
+    ***********************************************************************************/
 public:
     CPT_CopyTradeSession() {}
-    CPT_CopyTradeSession(EnumCopyTradeMode mode, int id, int weight) 
+    CPT_CopyTradeSession(EnumCopyTradeMode mode, int id, double weight)
     {
         mCptMode = mode;
         mSessionId = id;
@@ -90,6 +95,20 @@ public:
         return ArraySize(mTradingMap) / 2;
     }
 
+    void CopyTradingMap(CPT_CopyTradeSession& target)
+    {
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+            target.AddCopyTradPosition(mTradingMap[i], mTradingMap[i+1]);
+        }
+    }
+
+    /**********************************************************************************
+    *
+    *  load backup data
+    *
+    ***********************************************************************************/
     void LoadPreviousSession()
     {
         string filePath = GetFilePath();
@@ -134,6 +153,11 @@ public:
         }
     }
 
+    /**********************************************************************************
+    *
+    *  save backup data before terminate
+    *
+    ***********************************************************************************/
     void SaveSession()
     {
         int size = ArraySize(mTradingMap);
@@ -175,6 +199,11 @@ public:
         }
     }
 
+    /**********************************************************************************
+    *
+    *  add/delete function
+    *
+    ***********************************************************************************/
     void AddCopyTradPosition(ulong serverPosId, ulong myPosId)
     {
         int size = ArraySize(mTradingMap);
@@ -201,6 +230,11 @@ public:
         }
     }
 
+    /**********************************************************************************
+    *
+    *  compare function
+    *
+    ***********************************************************************************/
     void Compare(iPosition &posArr[], ulong &newPositions[], ulong &closedPositions[])
     {
         int curPosNum = ArraySize(posArr);
