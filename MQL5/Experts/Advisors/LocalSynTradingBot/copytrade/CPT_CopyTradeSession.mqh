@@ -80,9 +80,14 @@ public:
         mCptMode = mode;
     }
 
-    EnumCopyTradeMode GetMode()
+    EnumCopyTradeMode GetMode() const
     {
         return mCptMode;
+    }
+
+    int GetCptPositionNumber() const
+    {
+        return ArraySize(mTradingMap) / 2;
     }
 
     void LoadPreviousSession()

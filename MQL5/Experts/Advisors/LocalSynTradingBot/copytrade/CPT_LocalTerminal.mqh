@@ -20,9 +20,10 @@ public:
 
     ~CPT_LocalTerminal() {}
 
-    void Init(CPT_InOutManager* inOutController)
+    virtual bool Init(CPT_InOutManager* inOutController)
     {
         m_pInOutManager = inOutController;
+        return true;
     }
 
     virtual void Terminate() = 0;

@@ -25,7 +25,7 @@ public:
         }
     }
 
-    void Init(int terminal_mode, double weight)
+    bool Init(int terminal_mode, double weight)
     {
         CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
         if (terminal_mode == eCPT_MODE_SERVER)
@@ -39,8 +39,16 @@ public:
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
 
-        m_MyTerminal.Init(&mInOutMgr);
-        mInOutMgr.Init();
+        bool isInitOk = false;
+        
+        isInitOk = m_MyTerminal.Init(&mInOutMgr);
+        if (!isInitOk)
+        {
+            return false;
+        }
+
+        isInitOk = mInOutMgr.Init();
+        return isInitOk;
     }
 
     void Terminate()

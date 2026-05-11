@@ -118,7 +118,7 @@ private:
 public:
     // với server thì init ngay khi khởi tạo
     // với client thì init sau khi detect server file
-    void Init()
+    bool Init()
     {  
         // tạo thư mục để chắc chắn thư mục tồn tại
         if (!FileIsExist(FOLDER_EA_DIR, FILE_COMMON))
@@ -136,6 +136,7 @@ public:
         {
             LOGE("ERROR when init filepath or CreateOutputFile");
         }
+        return res;
     }
 
     // server: terminate khi close EA

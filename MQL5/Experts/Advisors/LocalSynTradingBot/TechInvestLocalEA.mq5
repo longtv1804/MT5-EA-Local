@@ -52,8 +52,11 @@ int OnInit()
         return(INIT_FAILED);
     }
 
-    g_CopyTradeController.Init(i_TerminalMode, i_Weight);
-
+    bool isOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
+    if (!isOk)
+    {
+        return INIT_FAILED;
+    }
     EventSetTimer(1);
     return(INIT_SUCCEEDED);
 }
