@@ -188,8 +188,29 @@ public:
         m_state = eSERVER_CONN_STATE_UNKNOWN;
     }
 
-    void OnPositionAdded(iPosition& newPos) {}
-    void OnPositionClosed(iPosition& newPos) {}
+    void OnPositionAdded(iPosition& newPos)
+    {
+        // sau khi position added: cần check lại và update event thành DONE
+        if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
+        {
+            if (mCopyTradeEventQueue[0].tracking_number == newPos.magic_number)
+            {
+                mCopyTradeEventQueue[0].status = EVS_DONE;
+            }
+        }
+    }
+
+    void OnPositionClosed(iPosition& closedPos)
+    {
+        // sau khi position closed, cần check lại và update event thành DONE
+        if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
+        {
+            if (mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
+            {
+                mCopyTradeEventQueue[0].status = EVS_DONE;
+            }
+        }
+    }
 
     /*
     *   init client:
