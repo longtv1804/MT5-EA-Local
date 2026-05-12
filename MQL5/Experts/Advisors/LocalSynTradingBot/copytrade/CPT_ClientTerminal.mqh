@@ -295,6 +295,13 @@ public:
         {
             mSession.SaveSession();
         }
+
+        // check event queue: logging out
+        int size = ArraySize(mCopyTradeEventQueue);
+        for (int i = 0; i < size; i++)
+        {
+            LOGD("Event Queue is not Emplty: " + ToString(mCopyTradeEventQueue[i]));
+        }
     }
 
     /**********************************************************************************
