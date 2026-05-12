@@ -72,6 +72,7 @@ public:
 
                 // Position đang mở
                 newPosition.status = ePOSITION_STATUS_OPEN;
+                newPosition.magic_number =  HistoryDealGetInteger(trans.deal, DEAL_MAGIC);
 
                 LOGD(">>> POSITION OPENED: " + ToString(newPosition));
 
@@ -86,6 +87,7 @@ public:
                 closedPosition.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
                 closedPosition.symbol          = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
                 closedPosition.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
+                closedPosition.magic_number    =  HistoryDealGetInteger(trans.deal, DEAL_MAGIC);
                 closedPosition.price_close     = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
                 closedPosition.status          = ePOSITION_STATUS_CLOSED;
                 closedPosition.close_reason    = ConvertCloseReason((ENUM_DEAL_REASON)HistoryDealGetInteger(trans.deal, DEAL_REASON));

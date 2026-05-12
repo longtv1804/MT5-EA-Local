@@ -117,6 +117,20 @@ string ToString(EnumCopyTradeMode mode)
 	}
 }
 
+string ToString(const CopyTradeEvent &ev)
+{
+	return StringFormat("[id=%d, status:%s, Type:%d, retry_count:%d, server_ticket:%d, volume:%.3f, target_ticket:%d, tracking_number:%d]",
+		ev.eventId,
+		ev.status,
+		ev.position_type,
+		ev.retry_count,
+		ev.server_ticket,
+		ev.volume,
+		ev.target_ticket,
+		ev.tracking_number
+	);	
+}
+
 //=======================================================================================
 //
 //	analyzing JSON functions

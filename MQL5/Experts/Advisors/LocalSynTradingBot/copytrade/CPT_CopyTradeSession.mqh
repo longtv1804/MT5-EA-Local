@@ -104,6 +104,45 @@ public:
         }
     }
 
+    ulong GetClientTicket(ulong server_ticket)
+    {
+        if (server_ticket == 0)
+        {
+            LOGE("server_ticket = 0");
+            return 0;
+        }
+        ulong res = 0;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+            if (mTradingMap[i] == server_ticket)
+            {
+                res = mTradingMap[i + 1];
+                break;
+            }
+        }
+        return res;
+    }
+    ulong GetServerTicket(ulong client_ticket)
+    {
+        if (client_ticket == 0)
+        {
+            LOGE("client_ticket = 0");
+            return 0;
+        }
+        ulong res = 0;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+            if (mTradingMap[i + 1] == client_ticket)
+            {
+                res = mTradingMap[i];
+                break;
+            }
+        }
+        return res;
+    }
+
     /**********************************************************************************
     *
     *  load backup data

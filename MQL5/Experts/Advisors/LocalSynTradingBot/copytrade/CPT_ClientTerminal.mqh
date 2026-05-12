@@ -7,6 +7,138 @@ class CPT_ClientTerminal : public CPT_LocalTerminal
 private:
     CPT_CopyTradeSession mSession;
 
+    /**********************************************************************************
+    *
+    *  queue xử lý copy trade event và các hàm quản lý queue
+    *
+    ***********************************************************************************/
+    enum EnumCopyTradeEvent
+    {
+        EV_ADD_NEW_POSITION = 1,
+        EV_CLOSED_POSITION = 2
+    };
+    CopyTradeEvent mCopyTradeEventQueue[];
+
+    bool HandleEvent(CopyTradeEvent& ev)
+    {
+        bool res = false;
+        switch (ev.eventId)
+        {
+            case EV_ADD_NEW_POSITION:
+            {
+                LOGD("execute EV_ADD_NEW_POSITION");
+                res = TerminalAPI::DoCopyTrade_OpendPosition(ev);
+                break;
+            }
+            case EV_CLOSED_POSITION:
+            {
+                LOGD("execute EV_CLOSED_POSITION");
+                res = TerminalAPI::DoCopyTrade_ClosePosition(ev);
+                break;
+            }
+            default:
+                LOGE("ERROR event id=" + (string)ev.eventId);
+                ev.status = EVS_DROP; // gán EVS_DROP để ignore event và next cái mới
+                break;
+        }
+        return res;
+    }
+    void Execute()
+    {
+        if (ArraySize(mCopyTradeEventQueue) == 0)
+        {
+            return;
+        }
+
+        // xử lý event:
+        //      + nếu event xử lý ok -> chuyển state PROCESSING
+        //      + nếu evnet xử lý failse -> chuyển state FAILED để retry hoặc next ev khác nếu nó bị DROP
+        if (mCopyTradeEventQueue[0].status == EVS_QUEUED)
+        {
+            bool res = HandleEvent(mCopyTradeEventQueue[0]);
+            if (res) {
+                mCopyTradeEventQueue[0].status = EVS_PROCESSING;
+                mCopyTradeEventQueue[0].time_out = 0;
+            }
+            else
+            {
+                if (mCopyTradeEventQueue[0].status == EVS_DROP){
+                    PopCopyTradeEvent();
+                } else {
+                    mCopyTradeEventQueue[0].status = EVS_FAILED;
+                }
+            }
+        }
+        // check timeout
+        else if (mCopyTradeEventQueue[0].status == EVS_PROCESSING)
+        {
+            const int TIME_OUT = 3;
+            // chờ timeout 3s
+            if (mCopyTradeEventQueue[0].retry_count < TIME_OUT)
+            {
+                mCopyTradeEventQueue[0].retry_count++;
+            }
+            // timeout -> set state failed.
+            else
+            {
+                mCopyTradeEventQueue[0].status = EVS_FAILED;
+            }
+        }
+        // retry
+        else if (mCopyTradeEventQueue[0].status == EVS_FAILED)
+        {
+            const int MAX_RETRY = 3;
+            if (mCopyTradeEventQueue[0].retry_count < MAX_RETRY)
+            {
+                mCopyTradeEventQueue[0].retry_count++;
+                mCopyTradeEventQueue[0].status = EVS_QUEUED;
+                Execute();
+            }
+            else
+            {
+                PopCopyTradeEvent();
+            }
+        }
+        // pop event, nếu queue còn -> next event.
+        else if (mCopyTradeEventQueue[0].status == EVS_DONE)
+        {
+            PopCopyTradeEvent();
+        }
+        else
+        {
+            LOGE("ERROR: wrong event state: " + (string)mCopyTradeEventQueue[0].status);
+        }
+    }
+
+    void AddCopytradeEvent(CopyTradeEvent &ev)
+    {
+        int size = ArraySize(mCopyTradeEventQueue);
+        ArrayResize(mCopyTradeEventQueue, size + 1);
+        mCopyTradeEventQueue[size] = ev;
+        if (size == 0)
+        {
+            Execute();
+        }
+    }
+
+    void PopCopyTradeEvent()
+    {
+        int size = ArraySize(mCopyTradeEventQueue);
+        if(size > 0)
+        {
+            for(int i = 1; i < size; i++)
+            {
+                mCopyTradeEventQueue[i - 1] = mCopyTradeEventQueue[i];
+            }
+
+            ArrayResize(mCopyTradeEventQueue, size - 1);
+            if (size - 1 > 0)
+            {
+                Execute();
+            }
+        }
+    }
+
 public:
     CPT_ClientTerminal(double weight) 
     :   CPT_LocalTerminal(),
@@ -60,7 +192,7 @@ public:
             // ko có pos bị closed + ko có pos mới -> vẫn là session cũ đang chạy
             else if (closedPosNum == 0 && newPosNum == 0)
             {
-                if (mSession.GetWeight() == previousSession.GetWeigth())
+                if (mSession.GetWeight() == previousSession.GetWeight())
                 {
                     mSession.SetSessionId(previousSession.GetSessionId());
                     previousSession.CopyTradingMap(mSession);
@@ -179,6 +311,10 @@ private:
 public:
     void DoPoll() override
     {
+        // execute events trước khi thực hiện polling data
+        Execute();
+
+        // bắt đầu polling data
         bool isInputExisted = m_pInOutManager.CheckInputFile();
         switch (m_state)
         {
@@ -309,11 +445,30 @@ private:
 
     void OnServer_NewPositionAdded(iPosition &newPos)
     {
-        double lot = mWeigthNumber * newPos.volume;
-        TerminalAPI::DoOpenNowPosition(lot);
+        LOGD("new remote position: " + ToString(newPos));
+        CopyTradeEvent ev;
+        ev.eventId = EV_ADD_NEW_POSITION;
+        ev.server_ticket = newPos.position_ticket;
+        ev.position_type = newPos.position_type;
+        ev.volume = newPos.volume * mSession.GetWeight();
+        AddCopytradeEvent(ev);
     }
 
     void OnServer_PositionClosed(iPosition &closedPos)
     {
+        LOGD("remote position closed: " + ToString(closedPos));
+        ulong target_ticket = mSession.GetClientTicket(closedPos.position_ticket);
+        if (target_ticket == 0)
+        {
+            LOGD("can not find the target - server-ticket" + (string)closedPos.position_ticket);
+            return;
+        }
+        CopyTradeEvent ev;
+        ev.eventId = EV_CLOSED_POSITION;
+        ev.server_ticket = closedPos.position_ticket;
+        ev.volume = closedPos.volume * mSession.GetWeight();
+        ev.position_type = closedPos.position_type;
+        ev.target_ticket = target_ticket;
+        AddCopytradeEvent(ev);
     }
 };

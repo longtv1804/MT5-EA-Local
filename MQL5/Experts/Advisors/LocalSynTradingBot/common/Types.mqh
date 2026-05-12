@@ -80,6 +80,40 @@ struct iPosition
 
     double               volume;
     double               price_open;
+    ulong                magic_number;
     double               price_close;
     EnumCloseReason      close_reason;
+};
+
+
+/*********************************************************
+*   Copy trade types
+**********************************************************/
+enum EventState
+{
+    EVS_QUEUED,         // đang chờ trong queue
+    EVS_PROCESSING,     // đang chờ response
+    EVS_FAILED,
+    EVS_DONE,
+    EVS_DROP
+};
+
+struct CopyTradeEvent
+{
+    int eventId;
+    EventState status;
+    int retry_count;
+    int time_out;
+
+    ulong server_ticket;
+
+    double volume;
+    EnumPositionType position_type;
+
+    // với close: là ticket cần close, 
+    // với add: sau khi đặt lệnh thảnh công thì lưu vào
+    ulong target_ticket;
+
+    // magic number để tracking lệnh thành công hay ko
+    ulong tracking_number;
 };
