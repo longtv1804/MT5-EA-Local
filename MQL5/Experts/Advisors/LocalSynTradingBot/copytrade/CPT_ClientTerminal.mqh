@@ -21,6 +21,11 @@ private:
 
     bool HandleEvent(CopyTradeEvent& ev)
     {
+        if(ev.status != EVS_QUEUED)
+        {
+            LOGE("Event is in wrong state " + ToString(ev));
+            return false;
+        }
         bool res = false;
         switch (ev.eventId)
         {
@@ -43,6 +48,34 @@ private:
         }
         return res;
     }
+
+    void HandleEventDone(CopyTradeEvent& ev)
+    {
+        if(ev.status != EVS_DONE)
+        {
+            LOGE("Event is in wrong state " + ToString(ev));
+            return;
+        }
+        switch (ev.eventId)
+        {
+            case EV_ADD_NEW_POSITION:
+            {
+                LOGD("ADD_NEW_POSITION done: server:" + (string)ev.server_ticket + " client:" + (string)ev.target_ticket);
+                mSession.AddCopyTradPosition(ev.server_ticket, ev.target_ticket);
+                break;
+            }
+            case EV_CLOSED_POSITION:
+            {
+                LOGD("CLOSED_POSITION done: client:" + (string)ev.target_ticket);
+                mSession.RemoveCopyTradePosition(ev.target_ticket);
+                break;
+            }
+            default:
+                LOGE("ERROR event id=" + (string)ev.eventId);
+                break;
+        }
+    }
+
     void Execute()
     {
         if (ArraySize(mCopyTradeEventQueue) == 0)
@@ -63,25 +96,27 @@ private:
             else
             {
                 if (mCopyTradeEventQueue[0].status == EVS_DROP){
-                    PopCopyTradeEvent();
+                    // do nothing
                 } else {
                     mCopyTradeEventQueue[0].status = EVS_FAILED;
                 }
             }
+            Execute();
         }
         // check timeout
         else if (mCopyTradeEventQueue[0].status == EVS_PROCESSING)
         {
-            const int TIME_OUT = 3;
+            const int TIME_OUT = 5;
             // chờ timeout 3s
-            if (mCopyTradeEventQueue[0].retry_count < TIME_OUT)
+            if (mCopyTradeEventQueue[0].time_out < TIME_OUT)
             {
-                mCopyTradeEventQueue[0].retry_count++;
+                mCopyTradeEventQueue[0].time_out++;
             }
             // timeout -> set state failed.
             else
             {
                 mCopyTradeEventQueue[0].status = EVS_FAILED;
+                Execute();
             }
         }
         // retry
@@ -92,15 +127,21 @@ private:
             {
                 mCopyTradeEventQueue[0].retry_count++;
                 mCopyTradeEventQueue[0].status = EVS_QUEUED;
-                Execute();
             }
             else
             {
-                PopCopyTradeEvent();
+                mCopyTradeEventQueue[0].status = EVS_DROP;
             }
+            Execute();
         }
-        // pop event, nếu queue còn -> next event.
+        // update session sau đó pop event
         else if (mCopyTradeEventQueue[0].status == EVS_DONE)
+        {
+            HandleEventDone(mCopyTradeEventQueue[0]);
+            PopCopyTradeEvent();
+        }
+        // pop event
+        else if (mCopyTradeEventQueue[0].status == EVS_DROP)
         {
             PopCopyTradeEvent();
         }
