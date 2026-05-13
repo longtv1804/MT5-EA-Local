@@ -17,7 +17,6 @@ public:
 
     ~CopyTradeController()
     {
-        Terminate();
         if (m_MyTerminal)
         {
             delete m_MyTerminal;

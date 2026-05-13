@@ -109,8 +109,9 @@ public:
         TerminalAPI::DoGetAllPosition(posArr);
         int size = ArraySize(posArr);
         // no need save session if the size is 0
-        if (size == 0)
+        if (size <= 0)
         {
+            LOGD("ignore save session because of no position");
             return;
         }
         CPT_CopyTradeSession session(eCPT_MODE_SERVER, mCopyTradeSessionId, 0);

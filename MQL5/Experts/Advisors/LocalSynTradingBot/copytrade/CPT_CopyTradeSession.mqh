@@ -205,8 +205,9 @@ public:
     void SaveSession()
     {
         int size = ArraySize(mTradingMap);
-        if (size > 0)
+        if (size <= 0)
         {
+            LOGD("ignore save session because of no position");
             return;
         }
         JsonBuilder builder;
