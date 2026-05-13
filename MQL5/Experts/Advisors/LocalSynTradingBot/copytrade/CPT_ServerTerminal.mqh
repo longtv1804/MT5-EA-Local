@@ -63,7 +63,6 @@ public:
             }
             else //if (ArraySize(posArr) > 0)
             {
-                LOGD("switch from CLIENT -> SERVER, but some position is existed, close EA");
                 TerminalAPI::DoShowMessagePopup("switch from CLIENT -> SERVER, but some position is existed, \nplease close all position first");
                 res = false;
             }

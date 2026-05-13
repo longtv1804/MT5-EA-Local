@@ -169,6 +169,7 @@ public:
             {
                 jsonStr += FileReadString(handle);
             }
+            FileClose(handle);
             mCptMode = (EnumCopyTradeMode)ParseIntValue(jsonStr, "cpt_mode");
             mSessionId = ParseIntValue(jsonStr, "session_id");
             mWeight = ParseDoubleValue(jsonStr, "weight");

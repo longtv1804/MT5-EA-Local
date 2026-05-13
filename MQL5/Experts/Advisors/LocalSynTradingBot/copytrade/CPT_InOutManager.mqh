@@ -41,7 +41,6 @@ private:
             isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
             if (isFileExisted == true)
             {
-                LOGD("SERVER is already existed!!!");
                 TerminalAPI::DoShowMessagePopup("SERVER is already existed, close EA!!!");
                 TerminalAPI::DoCloseEA();
                 return false;
@@ -67,7 +66,6 @@ private:
             }
             if (outputFilePath == "")
             {
-                LOGD("try 3 time but can not get client ID, close EA!!!");
                 TerminalAPI::DoShowMessagePopup("try 3 time but can not get client ID, close EA!!!");
                 TerminalAPI::DoCloseEA();
                 return false;
@@ -79,7 +77,6 @@ private:
         }
         else
         {
-            LOGD("Unknow copy trade mode, close EA!!!");
             TerminalAPI::DoShowMessagePopup("Unknow copy trade mode, close EA!!!");
             TerminalAPI::DoCloseEA();
             return false;

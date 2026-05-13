@@ -40,7 +40,6 @@ int OnInit()
     if (i_TerminalMode == eCPT_MODE_UNKNOWN)
     {
         TerminalAPI::DoShowMessagePopup("You haven't set the CopyTrade mode!!");
-        LOGE("can not detect the brocker");
         return(INIT_FAILED);
     }
 
@@ -48,7 +47,6 @@ int OnInit()
     if (CommonDatacenter::sLOCAL_TERMINAL_TYPE  == eTERMINAL_TYPE_UNKNOWN)
     {
         TerminalAPI::DoShowMessagePopup("can not detect the brocker!!!");
-        LOGE("can not detect the brocker");
         return(INIT_FAILED);
     }
 

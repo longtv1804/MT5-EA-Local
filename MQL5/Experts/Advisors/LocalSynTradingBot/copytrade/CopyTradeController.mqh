@@ -55,7 +55,10 @@ public:
 
     void Terminate()
     {
-        m_MyTerminal.Terminate();
+        if (m_MyTerminal)
+        {
+            m_MyTerminal.Terminate();
+        }
         mInOutMgr.Terminate();
     }
 
