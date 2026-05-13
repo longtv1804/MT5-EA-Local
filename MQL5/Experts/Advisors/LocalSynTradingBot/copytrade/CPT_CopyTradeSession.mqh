@@ -31,11 +31,15 @@ class CPT_CopyTradeSession
     {
         string server_name = AccountInfoString(ACCOUNT_SERVER);
         string broker_name = AccountInfoString(ACCOUNT_COMPANY);
-        string accountName = AccountInfoString(ACCOUNT_NAME);
+        #ifdef __MQL5__
+        long acc_id = AccountInfoInteger(ACCOUNT_LOGIN);
+        #else
+        long acc_id = AccountNumber();
+        #endif
+
         server_name = NormalizeBrokerName(server_name);
         broker_name = NormalizeBrokerName(broker_name);
-        accountName = NormalizeBrokerName(accountName);
-        return FOLDER_EA_DIR + "\\CPT_DATA\\" + broker_name + "_" + server_name + "_" + accountName + ".dat";
+        return FOLDER_EA_DIR + "\\CPT_DATA\\" + broker_name + "_" + server_name + "_" + (string)acc_id + ".dat";
     }
 
     static void CreateDataFolder()

@@ -39,7 +39,7 @@ private:
             // output file:
             mOutputFile = CPT_SERVER_OUTPUT_FILE_PATH;
             isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
-            if (isFileExisted == false)
+            if (isFileExisted == true)
             {
                 LOGD("SERVER is already existed!!!");
                 TerminalAPI::DoShowMessagePopup("SERVER is already existed, close EA!!!");
