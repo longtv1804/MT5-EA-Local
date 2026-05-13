@@ -85,6 +85,7 @@ string ToString(RemoteConnectionState state)
 	}
 }
 
+#ifdef __MQL5__
 EnumCloseReason ConvertCloseReason(const ENUM_DEAL_REASON value)
 {
 	switch(value)
@@ -103,6 +104,7 @@ EnumCloseReason ConvertCloseReason(const ENUM_DEAL_REASON value)
 			return eCLOSE_REASON_OTHER;
 	}
 }
+#endif
 
 string ToString(EnumCopyTradeMode mode)
 {

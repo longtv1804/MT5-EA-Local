@@ -131,6 +131,8 @@ public:
         // giảm thiểu số lượng check file quá nhiều:
         // 5s mới check một lần.
         static int s_pollCount = 0;
+        int i = 0, j = 0;
+        bool isExisted = false;
         if (s_pollCount % 5 == 0)
         {
             int currList[];
@@ -138,10 +140,10 @@ public:
             bool changed = false;
 
             // check new client then noti update for each
-            for (int i = 0; i < currNumber; i++)
+            for (i = 0; i < currNumber; i++)
             {
-                bool isExisted = false;
-                for (int j = 0; j < mClientNumber; j++)
+                isExisted = false;
+                for (j = 0; j < mClientNumber; j++)
                 {
                     if (currList[i] == mClientList[j])
                     {
@@ -157,10 +159,10 @@ public:
             }
 
             // check missing client and log out
-            for (int i = 0; i < mClientNumber; i++)
+            for (i = 0; i < mClientNumber; i++)
             {
-                bool isExisted = false;
-                for (int j = 0; j < currNumber; j++)
+                isExisted = false;
+                for (j = 0; j < currNumber; j++)
                 {
                     if (mClientList[i] == currList[j])
                     {

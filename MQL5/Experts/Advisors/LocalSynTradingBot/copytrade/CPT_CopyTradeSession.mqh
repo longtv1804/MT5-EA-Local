@@ -1,5 +1,6 @@
-#include <Generic/HashMap.mqh>
+#ifdef __MQL5__
 #include <Trade/Trade.mqh>
+#endif
 #include "../common/JsonBuilder.mqh"
 #include "../common/Utils.mqh"
 #include "../common/Types.mqh"
@@ -279,10 +280,12 @@ public:
         int curPosNum = ArraySize(posArr);
         int mapSize = ArraySize(mTradingMap);
         // xác định các position mới
-        for (int i = 0; i < curPosNum; i++)
+        int i = 0, j = 0, size = 0;
+        bool isExisted = false;
+        for (i = 0; i < curPosNum; i++)
         {
-            bool isExisted = false;
-            for (int j = 0; j < mapSize; j += 2)
+            isExisted = false;
+            for (j = 0; j < mapSize; j += 2)
             {
                 if (posArr[i].position_ticket == mTradingMap[j])
                 {
@@ -292,17 +295,17 @@ public:
             }
             if (isExisted == false)
             {
-                int size = ArraySize(newPositions);
+                size = ArraySize(newPositions);
                 ArrayResize(newPositions, size + 1);
                 newPositions[size] = posArr[i].position_ticket;
             }
         }
 
         // xác định các position bị closed:
-        for (int i = 0; i < mapSize; i += 2)
+        for (i = 0; i < mapSize; i += 2)
         {
-            bool isExisted = false;
-            for (int j = 0; j < curPosNum; j++)
+            isExisted = false;
+            for (j = 0; j < curPosNum; j++)
             {
                 if (mTradingMap[i] == posArr[j].position_ticket)
                 {
@@ -312,7 +315,7 @@ public:
             }
             if (isExisted == false)
             {
-                int size = ArraySize(closedPositions);
+                size = ArraySize(closedPositions);
                 ArrayResize(closedPositions, size + 1);
                 closedPositions[size] = mTradingMap[i];
             }

@@ -32,11 +32,13 @@ public:
 private:
     bool InitFilesPath()
     {
+        int i = 0, size = 0;
+        bool isFileExisted = false;
         if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_SERVER)
         {
             // output file:
             mOutputFile = CPT_SERVER_OUTPUT_FILE_PATH;
-            bool isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
+            isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
             if (isFileExisted == false)
             {
                 LOGD("SERVER is already existed!!!");
@@ -52,11 +54,11 @@ private:
         {
             // output file: thử 5 lần randome ID
             string outputFilePath = "";
-            for (int i = 0; i < 5; i++)
+            for (i = 0; i < 5; i++)
             {
                 int id = MathRand();
                 outputFilePath = CPT_CLIENT_OUTPUT_FILE_HEADER + (string)id + ".dat";
-                bool isFileExisted = FileIsExist(outputFilePath, FILE_COMMON);
+                isFileExisted = FileIsExist(outputFilePath, FILE_COMMON);
                 if (isFileExisted == false)
                 {
                     mOutputFileId = id;

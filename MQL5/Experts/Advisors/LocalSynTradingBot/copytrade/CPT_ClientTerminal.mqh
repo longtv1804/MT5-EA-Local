@@ -385,6 +385,8 @@ public:
 
         // bắt đầu polling data
         bool isInputExisted = m_pInOutManager.CheckInputFile();
+        string cmdList[];
+        int cmdNum = 0;
         switch (m_state)
         {
             case eSERVER_CONN_STATE_DISCONNECTED:
@@ -403,8 +405,7 @@ public:
                 }
                 else
                 {
-                    string cmdList[];
-                    int cmdNum = m_pInOutManager.PollData(cmdList);
+                    cmdNum = m_pInOutManager.PollData(cmdList);
                     if (cmdNum > 0)
                     {
                         Connecting_HandleServerCommands(cmdList);
@@ -422,8 +423,7 @@ public:
                 // đọc cmds khi kết nối vẫn connected
                 else
                 {
-                    string cmdList[];
-                    int cmdNum = m_pInOutManager.PollData(cmdList);
+                    cmdNum = m_pInOutManager.PollData(cmdList);
                     if (cmdNum > 0)
                     {
                         Connected_HandleServerCommands(cmdList);
@@ -481,6 +481,7 @@ private:
     void Connected_HandleServerCommands(string &cmdList[])
     {
         int size = ArraySize(cmdList);
+        string PositonJsonStr = "";
         for(int i = 0; i < size; i++)
         {
             string cmdStr = cmdList[i];
@@ -493,14 +494,14 @@ private:
                 }
                 case eCMD_CPT_POS_ADDED:
                 {
-                    string PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
                     iPosition newPos = ParseJsonToPosition(PositonJsonStr);
                     OnServer_NewPositionAdded(newPos);
                     break;
                 }
                 case eCMD_CPT_POS_CLOSED:
                 {
-                    string PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
                     iPosition closedPos = ParseJsonToPosition(PositonJsonStr);
                     OnServer_NewPositionAdded(closedPos); 
                     break;

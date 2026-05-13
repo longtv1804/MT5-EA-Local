@@ -2,7 +2,9 @@
 #include "Utils.mqh"
 #include "Constants.mqh"
 #include "CommonDataCenter.mqh"
+#ifdef __MQL5__
 #include <Trade/Trade.mqh>
+#endif
 
 class TerminalAPI
 {
@@ -67,8 +69,8 @@ public:
 
     static iPosition DoGetPosition(ulong position_ticket)
     {
-    #ifdef __MQL5__
         iPosition ins = {};
+    #ifdef __MQL5__
         if(PositionSelectByTicket(position_ticket))
         {
             ins.position_ticket = position_ticket;
@@ -88,6 +90,7 @@ public:
             }
             ins.volume          = PositionGetDouble(POSITION_VOLUME);
             ins.price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
+            ins.magic_number    = PositionGetInteger(POSITION_MAGIC);
             ins.status          = ePOSITION_STATUS_OPEN;
         }
         else
@@ -115,33 +118,21 @@ public:
                 {
                     ins.position_type = ePOSITION_TYPE_UNKNOWN;
                 }
-
-                ins.volume =
-                    OrderLots();
-
-                ins.price_open =
-                    OrderOpenPrice();
-
-                ins.status =
-                    ePOSITION_STATUS_OPEN;
+                ins.volume = OrderLots();
+                ins.price_open = OrderOpenPrice();
+                ins.magic_number = OrderMagicNumber();
+                ins.status = ePOSITION_STATUS_OPEN;
             }
             else
             {
-                ins.status =
-                    ePOSITION_STATUS_UNKNOWN;
+                ins.status = ePOSITION_STATUS_UNKNOWN;
             }
         }
         else
         {
-            LOGE("Failed OrderSelect ticket [" +
-                IntegerToString((int)position_ticket) +
-                "] Error=" +
-                IntegerToString(GetLastError()));
-
-            ins.status =
-                ePOSITION_STATUS_UNKNOWN;
+            LOGE("Failed OrderSelect ticket [" + IntegerToString((int)position_ticket) + "] Error=" + IntegerToString(GetLastError()));
+            ins.status = ePOSITION_STATUS_UNKNOWN;
         }
-
     #endif
         return ins;
     }
@@ -151,7 +142,6 @@ public:
         double total_volume = 0.0;
     #ifdef __MQL5__
         int total = PositionsTotal();
-
         for(int i = 0; i < total; i++)
         {
             if(PositionSelectByTicket(PositionGetTicket(i)))
@@ -207,7 +197,7 @@ public:
                 }
                 resArr[i].status          = ePOSITION_STATUS_OPEN;
                 resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
-
+                resArr[i].magic_number    = PositionGetInteger(POSITION_MAGIC);
                 resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
             }
             else
@@ -247,6 +237,7 @@ public:
                 resArr[idx].status = ePOSITION_STATUS_OPEN;
                 resArr[idx].volume = OrderLots();
                 resArr[idx].price_open = OrderOpenPrice();
+                resArr[idx].magic_number = OrderMagicNumber();
                 idx++;
             }
             else
@@ -428,7 +419,7 @@ public:
         }
     #else // MQL4
         RefreshRates();
-        int ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/ 0/*stoploss*/, 0/*takeprofit*/,
+        int ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
                         "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
         res = (ticket > 0);
         if(res)

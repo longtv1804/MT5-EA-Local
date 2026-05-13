@@ -29,7 +29,7 @@ public:
     {
         // init seed number for MathRand()
         MathSrand(GetTickCount());
-        
+
         CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
         if (terminal_mode == eCPT_MODE_SERVER)
         {
@@ -62,6 +62,8 @@ public:
 
     void OnTimer()
     {
+        // MQL5 có support OnTradeTransaction để detect position changed
+        // MQL4 ko hỗ trợ, nên phải detect sự thay đổi của position theo từng timer.
 #ifdef __MQL5__
         m_MyTerminal.DoPoll();
 #else
@@ -146,9 +148,82 @@ public:
 *
 ***********************************************************************************/
  #else
+ private:
+    iPosition mPositions[];
+
+    static int FindPositionIndex(iPosition &arr[], ulong ticket)
+    {
+        int total = ArraySize(arr);
+        for(int i = 0; i < total; i++)
+        {
+            if(arr[i].position_ticket == ticket)
+                return i;
+        }
+        return -1;
+    }
+
     void CheckLocalPositionChanged()
     {
+        // lấy snapshot hiện tại
+        iPosition current_positions[];
+        TerminalAPI::DoGetAllPosition(current_positions);
 
+        int cur_total  = ArraySize(current_positions);
+        int prev_total = ArraySize(mPositions);
+
+        int i = 0, idx = 0;
+        ulong ticket = 0;
+
+        //==================================================
+        // Detect CLOSED positions
+        //==================================================
+        iPosition closedPos;
+        for(i = 0; i < prev_total; i++)
+        {
+            ticket = mPositions[i].position_ticket;
+            idx = FindPositionIndex(current_positions, ticket);
+            if(idx < 0)
+            {
+                closedPos = mPositions[i];
+                closedPos.status = ePOSITION_STATUS_CLOSED;
+                LOGD(">>> POSITION CLOSED: " + ToString(closedPos));
+                m_MyTerminal.OnPositionClosed(closedPos);
+            }
+            else
+            {
+                if (current_positions[idx].volume < mPositions[i].volume)
+                {
+                    closedPos = mPositions[i];
+                    closedPos.volume = mPositions[i].volume - current_positions[idx].volume;
+                    closedPos.status = ePOSITION_STATUS_CLOSED;
+                    LOGD(">>> POSITION PARTIAL CLOSED: " + ToString(closedPos));
+                    m_MyTerminal.OnPositionClosed(closedPos);
+                }
+            }
+        }
+
+        //==================================================
+        // Detect NEW positions
+        //==================================================
+        for(i = 0; i < cur_total; i++)
+        {
+            ticket = current_positions[i].position_ticket;
+            idx = FindPositionIndex(mPositions, ticket);
+            if(idx < 0)
+            {
+                LOGD(">>> POSITION ADDED: ticket=" + ToString(current_positions[i]));
+                m_MyTerminal.OnPositionAdded(current_positions[i]);
+            }
+        }
+
+        //==================================================
+        // update snapshot
+        //==================================================
+        ArrayResize(mPositions, cur_total);
+        for(i = 0; i < cur_total; i++)
+        {
+            mPositions[i] = current_positions[i];
+        }
     }
 #endif
 };
