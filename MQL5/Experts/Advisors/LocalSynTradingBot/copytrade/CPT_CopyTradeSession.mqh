@@ -284,15 +284,16 @@ public:
     {
         int curPosNum = ArraySize(posArr);
         int mapSize = ArraySize(mTradingMap);
-        // xác định các position mới
         int i = 0, j = 0, size = 0;
+
+        // xác định các position mới
         bool isExisted = false;
         for (i = 0; i < curPosNum; i++)
         {
             isExisted = false;
             for (j = 0; j < mapSize; j += 2)
             {
-                if (posArr[i].position_ticket == mTradingMap[j])
+                if (posArr[i].position_ticket == mTradingMap[j + 1])
                 {
                     isExisted = true;
                     break;
@@ -312,7 +313,7 @@ public:
             isExisted = false;
             for (j = 0; j < curPosNum; j++)
             {
-                if (mTradingMap[i] == posArr[j].position_ticket)
+                if (mTradingMap[i + 1] == posArr[j].position_ticket)
                 {
                     isExisted = true;
                     break;
