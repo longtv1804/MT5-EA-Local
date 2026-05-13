@@ -20,9 +20,19 @@ public:
 
     static void DetectBroker()
     {
-        string server_name = AccountInfoString(ACCOUNT_SERVER);
-        string broker_name = AccountInfoString(ACCOUNT_COMPANY);
-        string accountName = AccountInfoString(ACCOUNT_NAME);
+        string server_name = "";
+        string broker_name = "";
+        string accountName = "";
+
+    #ifdef __MQL5__
+        server_name = AccountInfoString(ACCOUNT_SERVER);
+        broker_name = AccountInfoString(ACCOUNT_COMPANY);
+        accountName = AccountInfoString(ACCOUNT_NAME);
+    #else
+        server_name = AccountServer();
+        broker_name = AccountCompany();
+        accountName = AccountName();
+    #endif
         StringToLower(server_name);
         LOGD("server_name=[" + server_name + "], broker_name=[" + broker_name + "], accountName=[" + accountName + "]");
         if (broker_name == BROKER_NAME_FPG)
@@ -57,9 +67,8 @@ public:
 
     static iPosition DoGetPosition(ulong position_ticket)
     {
-        iPosition ins;
-        ZeroMemory(ins);
-
+    #ifdef __MQL5__
+        iPosition ins = {};
         if(PositionSelectByTicket(position_ticket))
         {
             ins.position_ticket = position_ticket;
@@ -85,13 +94,62 @@ public:
         {
             ins.status = ePOSITION_STATUS_UNKNOWN;
         }
+    #else // MQL4
+        if(OrderSelect((int)position_ticket, SELECT_BY_TICKET))
+        {
+            int type = OrderType();
+            if(type == OP_BUY || type == OP_SELL)
+            {
+                ins.position_ticket = (ulong)OrderTicket();
+                ins.symbol = OrderSymbol();
 
+                if(type == OP_BUY)
+                {
+                    ins.position_type = ePOSITION_TYPE_BUY;
+                }
+                else if(type == OP_SELL)
+                {
+                    ins.position_type = ePOSITION_TYPE_SELL;
+                }
+                else
+                {
+                    ins.position_type = ePOSITION_TYPE_UNKNOWN;
+                }
+
+                ins.volume =
+                    OrderLots();
+
+                ins.price_open =
+                    OrderOpenPrice();
+
+                ins.status =
+                    ePOSITION_STATUS_OPEN;
+            }
+            else
+            {
+                ins.status =
+                    ePOSITION_STATUS_UNKNOWN;
+            }
+        }
+        else
+        {
+            LOGE("Failed OrderSelect ticket [" +
+                IntegerToString((int)position_ticket) +
+                "] Error=" +
+                IntegerToString(GetLastError()));
+
+            ins.status =
+                ePOSITION_STATUS_UNKNOWN;
+        }
+
+    #endif
         return ins;
     }
 
     static double GetTotalAliveVolume()
     {
         double total_volume = 0.0;
+    #ifdef __MQL5__
         int total = PositionsTotal();
 
         for(int i = 0; i < total; i++)
@@ -102,11 +160,28 @@ public:
                 total_volume += vol;
             }
         }
+    #else // MQL4
+        int total = OrdersTotal();
+        for(int i = 0; i < total; i++)
+        {
+            if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                // chỉ tính market orders đang sống
+                int type = OrderType();
+
+                if(type == OP_BUY || type == OP_SELL)
+                {
+                    total_volume += OrderLots();
+                }
+            }
+        }
+    #endif
         return total_volume;
     }
 
     static void DoGetAllPosition(iPosition &resArr[])
     {
+    #ifdef __MQL5__
         int total = PositionsTotal();
         ArrayResize(resArr, total);
 
@@ -140,12 +215,54 @@ public:
                 LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
                 resArr[i].status = ePOSITION_STATUS_UNKNOWN;
             }
-        }     
+        }
+    #else // MQL4
+        int total = OrdersTotal();
+        ArrayResize(resArr, total);
+        int idx = 0;
+        for(int i = 0; i < total; i++)
+        {
+            if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+            {
+                int type = OrderType();
+                // chỉ lấy market order
+                if(type != OP_BUY && type != OP_SELL)
+                    continue;
+
+                resArr[idx].position_ticket = (ulong)OrderTicket();
+                resArr[idx].symbol = OrderSymbol();
+
+                if(type == OP_BUY)
+                {
+                    resArr[idx].position_type = ePOSITION_TYPE_BUY;
+                }
+                else if(type == OP_SELL)
+                {
+                    resArr[idx].position_type = ePOSITION_TYPE_SELL;
+                }
+                else
+                {
+                    resArr[idx].position_type = ePOSITION_TYPE_UNKNOWN;
+                }
+                resArr[idx].status = ePOSITION_STATUS_OPEN;
+                resArr[idx].volume = OrderLots();
+                resArr[idx].price_open = OrderOpenPrice();
+                idx++;
+            }
+            else
+            {
+                LOGE("Failed OrderSelect index=" + IntegerToString(i) + " Error=" + IntegerToString(GetLastError()));
+            }
+        }
+        // resize đúng số lượng market orders
+        ArrayResize(resArr, idx);
+    #endif
     }
 
     static bool DoClosePosition(ulong position_ticket)
     {
         bool res = false;
+    #ifdef __MQL5__
         if(PositionSelectByTicket(position_ticket))
         {
             CTrade trade;
@@ -159,31 +276,88 @@ public:
                 LOGE("Failed to close [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
             }
         }
+    #else // MQL4
+        if(OrderSelect((int)position_ticket, SELECT_BY_TICKET))
+        {
+            int type = OrderType();
+            if(type == OP_BUY || type == OP_SELL)
+            {
+                double lots  = OrderLots();
+                double price = 0;
+                if(type == OP_BUY)
+                    price = Bid;
+                else
+                    price = Ask;
+
+                RefreshRates();
+                res = OrderClose(OrderTicket(), lots, price, 5/*slippage*/, clrNONE);
+                if(res)
+                {
+                    LOGD("Closed position [" + IntegerToString((int)position_ticket) + "]");
+                }
+                else
+                {
+                    LOGE("Failed to close [" + IntegerToString((int)position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+                }
+            }
+        }
+    #endif
         return res;
     }
 
     static bool DoClosePartialPosition(ulong position_ticket, double volume)
     {
         bool res = false;
+
+    #ifdef __MQL5__
         if(PositionSelectByTicket(position_ticket))
         {
             CTrade trade;
             res = trade.PositionClosePartial(position_ticket, volume);
-            if (res == true)
+            if(res)
             {
-                LOGD("Closed position [ " + IntegerToString(position_ticket) + " ]");
+                LOGD("Partial closed position [" + IntegerToString((long)position_ticket) + "] volume=" + DoubleToString(volume, 2));
             }
             else
             {
-                LOGE("Failed to close [" + IntegerToString(position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+                LOGE("Failed partial close [" + IntegerToString((long)position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
             }
-
         }
+    #else // MQL4
+        if(OrderSelect((int)position_ticket, SELECT_BY_TICKET))
+        {
+            int type = OrderType();
+            if(type == OP_BUY || type == OP_SELL)
+            {
+                RefreshRates();
+                double price = (type == OP_BUY) ? Bid : Ask;
+                double lots = OrderLots();
+                // không cho close quá volume hiện tại
+                if(volume > lots) volume = lots;
+
+                // normalize theo lot step
+                double lotstep = MarketInfo(Symbol(), MODE_LOTSTEP);
+                volume = NormalizeDouble( MathFloor(volume / lotstep) * lotstep, 2);
+
+                res = OrderClose(OrderTicket(), volume, price, 5, clrNONE);
+
+                if(res)
+                {
+                    LOGD("Partial closed position [" + IntegerToString((int)position_ticket) + "] volume=" + DoubleToString(volume, 2));
+                }
+                else
+                {
+                    LOGE("Failed partial close [" + IntegerToString((int)position_ticket) + "] | Error: " + IntegerToString(GetLastError()));
+                }
+            }
+        }
+    #endif
         return res;
     }
 
     static void DoEndAllPositions()
     {
+    #ifdef __MQL5__
         CTrade trade;
         int total = PositionsTotal();
         while (total > 0)
@@ -201,16 +375,49 @@ public:
             }
             total -= 1;
         }
+    #else // MQL4
+        while(OrdersTotal() > 0)
+        {
+            bool found = false;
+            for(int i = OrdersTotal() - 1; i >= 0; i--)
+            {
+                if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+                {
+                    int type = OrderType();
+                    if(type == OP_BUY || type == OP_SELL)
+                    {
+                        found = true;
+                        RefreshRates();
+                        double price = (type == OP_BUY) ? Bid : Ask;
+
+                        bool res = OrderClose( OrderTicket(), OrderLots(), price, 5, clrNONE);
+
+                        if(res) {
+                            LOGD("Closed position [" + IntegerToString(OrderTicket()) + "]");
+                        }
+                        else
+                        {
+                            LOGE("Failed to close [" + IntegerToString(OrderTicket()) + "] | Error: " + IntegerToString(GetLastError()));
+                            return;
+                        }
+                    }
+                }
+            }
+            // tránh infinite loop
+            if(!found) break;
+        }
+    #endif
     }
 
     static bool DoCopyTrade_OpendPosition(CopyTradeEvent &ev)
     {
-        CTrade trade;
-        MathSrand(GetTickCount());
+        bool res = false;
+        // generate pseudo unique magic number
         ev.tracking_number = ((ulong)MathRand() << 16) | (ulong)MathRand();
+    #ifdef __MQL5__
+        CTrade trade;
         trade.SetExpertMagicNumber(ev.tracking_number);
-
-        bool res = trade.Buy(ev.volume);
+        res = trade.Buy(ev.volume);
         if(res)
         {
             LOGD("place buy order ok");
@@ -219,6 +426,20 @@ public:
         {
             LOGD("Error in place buy order: " + (string)GetLastError());
         }
+    #else // MQL4
+        RefreshRates();
+        int ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/ 0/*stoploss*/, 0/*takeprofit*/,
+                        "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
+        res = (ticket > 0);
+        if(res)
+        {
+            LOGD("Place BUY order OK, ticket=" + IntegerToString(ticket));
+        }
+        else
+        {
+            LOGE("Error place BUY order: " +  IntegerToString(GetLastError()));
+        }
+    #endif
         return res;
     }
 
@@ -236,72 +457,60 @@ public:
             LOGD("invalid volume");
             return false;
         }
+    #ifdef __MQL5__
+        if(!PositionSelectByTicket(ticket))
+        {
+            LOGD("PositionSelectByTicket failed");
+            return false;
+        }
 
-        #ifdef __MQL5__
+        string symbol = PositionGetString(POSITION_SYMBOL);
+        double pos_volume = PositionGetDouble(POSITION_VOLUME);
+        double close_volume = MathMin(ev.volume, pos_volume);
 
-            // =========================================
-            // MQL5
-            // =========================================
+        CTrade trade;
+        bool ok = trade.PositionClosePartial(ticket, close_volume);
 
-            if(!PositionSelectByTicket(ticket))
-            {
-                LOGD("PositionSelectByTicket failed");
-                return false;
-            }
+        if(!ok)
+        {
+            LOGD(StringFormat("PositionClosePartial failed retcode=%d desc=%s", 
+                                trade.ResultRetcode(), trade.ResultRetcodeDescription()));
+            return false;
+        }
+        LOGD(StringFormat("Close success ticket=%I64u close_volume=%f", ticket, close_volume));
+        return true;
+    #else // MQL4
+        if(!OrderSelect((int)ticket, SELECT_BY_TICKET))
+        {
+            LOGD("OrderSelect failed");
+            return false;
+        }
 
-            string symbol = PositionGetString(POSITION_SYMBOL);
-            double pos_volume = PositionGetDouble(POSITION_VOLUME);
-            double close_volume = MathMin(ev.volume, pos_volume);
+        int type = OrderType();
+        if(type != OP_BUY && type != OP_SELL)
+        {
+            LOGD("Not market order");
+            return false;
+        }
 
-            CTrade trade;
-            bool ok = trade.PositionClosePartial(ticket, close_volume);
+        string symbol = OrderSymbol();
+        double lots = OrderLots();
+        double close_volume = MathMin(ev.volume, lots);
 
-            if(!ok)
-            {
-                LOGD(StringFormat("PositionClosePartial failed retcode=%d desc=%s", 
-                                    trade.ResultRetcode(), trade.ResultRetcodeDescription()));
-                return false;
-            }
-            LOGD(StringFormat("Close success ticket=%I64u close_volume=%f", ticket, close_volume));
-            return true;
-        #else
+        RefreshRates();
+        double price = (type == OP_BUY) ? MarketInfo(symbol, MODE_BID) : MarketInfo(symbol, MODE_ASK);
 
-            // =========================================
-            // MQL4
-            // =========================================
+        LOGD(StringFormat("Closing order ticket=%I64u symbol=%s volume=%f", ticket, symbol, close_volume));
 
-            if(!OrderSelect((int)ticket, SELECT_BY_TICKET))
-            {
-                LOGD("OrderSelect failed");
-                return false;
-            }
+        bool ok = OrderClose((int)ticket, close_volume, price, 10, clrNONE);
+        if(!ok)
+        {
+            LOGD("OrderClose failed err=" + (string)GetLastError());
 
-            int type = OrderType();
-            if(type != OP_BUY && type != OP_SELL)
-            {
-                LOGD("Not market order");
-                return false;
-            }
-
-            string symbol = OrderSymbol();
-            double lots = OrderLots();
-            double close_volume = MathMin(ev.volume, lots);
-
-            RefreshRates();
-            double price = (type == OP_BUY) ? MarketInfo(symbol, MODE_BID) : MarketInfo(symbol, MODE_ASK);
-
-            LOGD(StringFormat("Closing order ticket=%I64u symbol=%s volume=%f", ticket, symbol, close_volume));
-
-            bool ok = OrderClose((int)ticket, close_volume, price, 10, clrNONE);
-            if(!ok)
-            {
-                LOGD("OrderClose failed err=" + (string)GetLastError());
-
-                return false;
-            }
-            LOGD("Close success");
-            return true;
-
-        #endif
+            return false;
+        }
+        LOGD("Close success");
+        return true;
+    #endif
     }
 };

@@ -27,6 +27,9 @@ public:
 
     bool Init(int terminal_mode, double weight)
     {
+        // init seed number for MathRand()
+        MathSrand(GetTickCount());
+        
         CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
         if (terminal_mode == eCPT_MODE_SERVER)
         {
