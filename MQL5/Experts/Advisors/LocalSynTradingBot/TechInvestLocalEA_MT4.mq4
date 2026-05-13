@@ -1,11 +1,10 @@
 //+------------------------------------------------------------------+
-//|                                            TechInvestLocalEA.mq5 |
-//|                                  Copyright 2026, MetaQuotes Ltd. |
-//|                                             https://www.mql5.com |
+//|                                        TechInvestLocalEA_MT4.mq4 |
+//|                             Copyright 2000-2026, MetaQuotes Ltd. |
+//|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2026, MetaQuotes Ltd."
-#property link      "https://www.mql5.com"
-#property version   "1.00"
+#property copyright   "2000-2026, MetaQuotes Ltd."
+#property link        "https://www.mql5.com"
 
 #include "copytrade/CopyTradeController.mqh"
 #include "common/Utils.mqh"
