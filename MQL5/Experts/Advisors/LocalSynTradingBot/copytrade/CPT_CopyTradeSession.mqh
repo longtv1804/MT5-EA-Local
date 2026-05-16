@@ -68,6 +68,7 @@ public:
     void SetSessionId(int id)
     {
         mSessionId = id;
+        LOGD("Session changed " + (string)mSessionId + " -> " + (string)id);
     }
 
     int GetSessionId() const
@@ -98,6 +99,34 @@ public:
     int GetCptPositionNumber() const
     {
         return ArraySize(mTradingMap) / 2;
+    }
+
+    int GetClientPositionNumer() const
+    {
+        int posNum = 0;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+           if (mTradingMap[i + 1] != 0)
+           {
+                posNum++;
+           }
+        }
+        return posNum;
+    }
+
+    int GetServerPositionNumer() const
+    {
+        int posNum = 0;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+           if (mTradingMap[i] != 0)
+           {
+                posNum++;
+           }
+        }
+        return posNum;
     }
 
     void CopyTradingMap(CPT_CopyTradeSession& target)
@@ -146,6 +175,44 @@ public:
             }
         }
         return res;
+    }
+
+    bool HasClientTicket(ulong client_ticket)
+    {
+        if (client_ticket == 0) return false;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+            if (mTradingMap[i + 1] == client_ticket)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasServerTicket(ulong server_ticket)
+    {
+        if (server_ticket == 0) return false;
+        int size = ArraySize(mTradingMap);
+        for (int i = 0; i < size; i += 2)
+        {
+            if (mTradingMap[i] == server_ticket)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void GetTradingData(ulong &arr[])
+    {
+        int size = ArraySize(mTradingMap);
+        ArrayResize(arr, size);
+        for (int i = 0; i < size; i += 1)
+        {
+            arr[i] = mTradingMap[i];
+        }
     }
 
     /**********************************************************************************
@@ -278,7 +345,9 @@ public:
 
     /**********************************************************************************
     *
-    *  compare function
+    *   compare function
+    *   xác định các position hiện tại và dữ liệu trước đó xem có new positon 
+    *   hay các position bị closed ko
     *
     ***********************************************************************************/
     void Compare(iPosition &posArr[], ulong &newPositions[], ulong &closedPositions[])

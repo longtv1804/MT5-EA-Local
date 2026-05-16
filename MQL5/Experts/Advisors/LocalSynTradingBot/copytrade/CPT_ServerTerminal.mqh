@@ -57,29 +57,36 @@ public:
         if (previousSession.GetMode() == eCPT_MODE_CLIENT)
         {
             // không có position nào đang chạy
-            if (currentPosNum ==  0)
-            {
-                mCopyTradeSessionId = MathRand();
+            if (currentPosNum >  0)
+                TerminalAPI::DoShowMessagePopup("WARNING: CLIENT -> SERVER\n
+                            có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
             }
-            else //if (ArraySize(posArr) > 0)
-            {
-                TerminalAPI::DoShowMessagePopup("switch from CLIENT -> SERVER, but some position is existed, \nplease close all position first");
-                res = false;
-            }
+            mCopyTradeSessionId = MathRand();
         }
         // 2: nếu trc đó là server, giờ vẫn là server
         else if (previousSession.GetMode() == eCPT_MODE_SERVER)
         {
-            // không có position nào đang chạy
+            // ko có position nào: new session
             if (currentPosNum == 0)
             {
                 mCopyTradeSessionId = MathRand();
             }
-            // ko có pos bị closed + ko có pos mới -> vẫn là session cũ đang chạy
+            // possion list trùng hoàn toàn với session cũ: lấy session cũ
             else if (closedPosNum == 0 && newPosNum == 0)
             {
                 mCopyTradeSessionId = previousSession.GetSessionId();
             }
+            // possion list trùng một phần (có cái bị close, có new pos): lấy session cũ + warning
+            else if (closedPosNum < previousSession.GetClientPositionNumer())
+            {
+                mCopyTradeSessionId = previousSession.GetSessionId();
+            }
+            // possition cũ đã bị close hết
+            else if (closedPosNum == previousSession.GetClientPositionNumer())
+            {
+                mCopyTradeSessionId = MathRand();
+            }
+            // case khác: close EA 
             else
             {
                 TerminalAPI::DoShowMessagePopup("ERROR in INIT SERVER!!!");
@@ -91,13 +98,10 @@ public:
         {
             if (currentPosNum > 0)
             {
-                TerminalAPI::DoShowMessagePopup("ERROR in INIT SERVER!!!");
-                res = false;
+                TerminalAPI::DoShowMessagePopup("WARNING: SERVER\n
+                            có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
             }
-            else
-            {
-                mCopyTradeSessionId = MathRand();
-            }
+            mCopyTradeSessionId = MathRand();
         }
         return res;
     }
@@ -202,6 +206,7 @@ private:
 
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_UPDATE);
+        builder.Set("session_id", (string)mCopyTradeSessionId);
         builder.Set("to_client", (string)client_id);
         builder.Set("curr_positions", currentPositions);
 
@@ -212,6 +217,7 @@ private:
     {
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_ADDED);
+        builder.Set("session_id", (string)mCopyTradeSessionId);
         builder.Set("positon_info", newPos);
         
         m_pInOutManager.SendData(builder.Build());
@@ -221,6 +227,7 @@ private:
     {
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_CLOSED);
+        builder.Set("session_id", (string)mCopyTradeSessionId);
         builder.Set("positon_info", closedPos);
         
         m_pInOutManager.SendData(builder.Build());
