@@ -9,7 +9,8 @@ private:
 
     /**********************************************************************************
     *
-    *  queue xử lý copy trade event và các hàm quản lý queue
+    *   Event Queue
+    *   queue xử lý copy trade event và các hàm quản lý queue
     *
     ***********************************************************************************/
     enum EnumCopyTradeEvent
@@ -180,36 +181,18 @@ private:
         }
     }
 
+    /**********************************************************************************
+    *
+    *   init/terminate
+    *
+    *
+    ***********************************************************************************/
 public:
     CPT_ClientTerminal(double weight) 
     :   CPT_LocalTerminal(),
         mSession(eCPT_MODE_SERVER, 0, weight) 
     {
         m_state = eSERVER_CONN_STATE_UNKNOWN;
-    }
-
-    void OnPositionAdded(iPosition& newPos)
-    {
-        // sau khi position added: cần check lại và update event thành DONE
-        if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
-        {
-            if (mCopyTradeEventQueue[0].tracking_number == newPos.magic_number)
-            {
-                mCopyTradeEventQueue[0].status = EVS_DONE;
-            }
-        }
-    }
-
-    void OnPositionClosed(iPosition& closedPos)
-    {
-        // sau khi position closed, cần check lại và update event thành DONE
-        if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
-        {
-            if (mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
-            {
-                mCopyTradeEventQueue[0].status = EVS_DONE;
-            }
-        }
     }
 
     /*
@@ -301,6 +284,35 @@ public:
         for (int i = 0; i < size; i++)
         {
             LOGD("Event Queue is not Emplty: " + ToString(mCopyTradeEventQueue[i]));
+        }
+    }
+
+    /**********************************************************************************
+    *
+    *   Possions changed
+    *
+    ***********************************************************************************/
+    void OnPositionAdded(iPosition& newPos) override
+    {
+        // sau khi position added: cần check lại và update event thành DONE
+        if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
+        {
+            if (mCopyTradeEventQueue[0].tracking_number == newPos.magic_number)
+            {
+                mCopyTradeEventQueue[0].status = EVS_DONE;
+            }
+        }
+    }
+
+    void OnPositionClosed(iPosition& closedPos) override
+    {
+        // sau khi position closed, cần check lại và update event thành DONE
+        if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
+        {
+            if (mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
+            {
+                mCopyTradeEventQueue[0].status = EVS_DONE;
+            }
         }
     }
 
@@ -460,7 +472,6 @@ private:
             int client_id =  ParseIntValue(cmdStr, "to_client");
             if (client_id == m_pInOutManager.GetId())
             {
-                LOGD("cmd UPDATE detected");
                 string PositonArrayStr = ParseJsonValue(cmdStr, "curr_positions");
                 iPosition positions[];
                 ParseJsonArrayToPositions(PositonArrayStr, positions);
@@ -472,7 +483,6 @@ private:
                     TerminalAPI::DoCloseEA();
                     return;
                 }
-
                 SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
             }
         }
