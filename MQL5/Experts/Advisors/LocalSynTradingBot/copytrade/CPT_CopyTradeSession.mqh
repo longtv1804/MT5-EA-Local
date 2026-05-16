@@ -215,6 +215,58 @@ public:
         }
     }
 
+    void UpdateLatestPosition(iPosition &latestPositions[])
+    {
+        int i = 0, j = 0;
+        int mapSize = ArraySize(mTradingMap);
+        int posNum = ArraySize(latestPositions);
+        bool isExisted = false;
+        // xóa bỏ các position đã bị close
+        for (i = 0; i < mapSize; i+=2)
+        {
+            isExisted = false;
+            for (j = 0; j < posNum; j++)
+            {
+                if (mTradingMap[i + 1] == latestPositions[j].position_ticket)
+                {
+                    isExisted = true;
+                    break;
+                }
+            }
+            if (isExisted == false)
+            {
+                // position đã bị close -> remove it in trading map
+                for (j = i; j < mapSize - 2; j += 2)
+                {
+                    mTradingMap[j] = mTradingMap[j + 2];
+                    mTradingMap[j + 1] = mTradingMap[j + 2 + 1];
+                }
+                mapSize -= 2;
+                ArrayResize(mTradingMap, mapSize);
+                i -= 2;
+            }
+        }
+        // thêm các new position
+        for (j = 0; j < posNum; j++)
+        {
+            isExisted = false;
+            for (i = 0; i < mapSize; i+=2)
+            {
+                if (mTradingMap[i + 1] == latestPositions[j].position_ticket)
+                {
+                    isExisted = true;
+                    break;
+                }
+            }
+            if (isExisted == false)
+            {
+                AddCopyTradPosition(0, latestPositions[j].position_ticket);
+                mapSize = ArraySize(mTradingMap);
+            }
+        }
+    }
+
+
     /**********************************************************************************
     *
     *  load backup data
