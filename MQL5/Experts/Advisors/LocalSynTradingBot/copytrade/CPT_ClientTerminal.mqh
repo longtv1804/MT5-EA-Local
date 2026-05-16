@@ -541,6 +541,7 @@ private:
     {
         int size = ArraySize(cmdList);
         string PositonJsonStr = "";
+        int serverSession = 0;
         for(int i = 0; i < size; i++)
         {
             string cmdStr = cmdList[i];
@@ -555,14 +556,16 @@ private:
                 {
                     PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
                     iPosition newPos = ParseJsonToPosition(PositonJsonStr);
-                    OnServer_NewPositionAdded(newPos);
+                    serverSession = ParseIntValue(cmdStr, "session_id");
+                    OnServer_NewPositionAdded(serverSession, newPos);
                     break;
                 }
                 case eCMD_CPT_POS_CLOSED:
                 {
                     PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
                     iPosition closedPos = ParseJsonToPosition(PositonJsonStr);
-                    OnServer_NewPositionAdded(closedPos); 
+                    serverSession = ParseIntValue(cmdStr, "session_id");
+                    OnServer_NewPositionAdded(serverSession, closedPos); 
                     break;
                 }
                 default:
@@ -572,9 +575,14 @@ private:
         }
     }
 
-    void OnServer_NewPositionAdded(iPosition &newPos)
+    void OnServer_NewPositionAdded(int session, iPosition &newPos)
     {
-        LOGD("new remote position: " + ToString(newPos));
+        LOGD("new remote position, session: " + (string)session + " " + ToString(newPos));
+        if (session != mSession.GetSessionId())
+        {
+            LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
+            return;
+        }
         CopyTradeEvent ev;
         ev.eventId = EV_ADD_NEW_POSITION;
         ev.server_ticket = newPos.position_ticket;
@@ -583,9 +591,14 @@ private:
         AddCopytradeEvent(ev);
     }
 
-    void OnServer_PositionClosed(iPosition &closedPos)
+    void OnServer_PositionClosed(int session, iPosition &closedPos)
     {
-        LOGD("remote position closed: " + ToString(closedPos));
+        LOGD("remote position closed, session: " + (string)session + " " + ToString(closedPos));
+        if (session != mSession.GetSessionId())
+        {
+            LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
+            return;
+        }
         ulong target_ticket = mSession.GetClientTicket(closedPos.position_ticket);
         if (target_ticket == 0)
         {
