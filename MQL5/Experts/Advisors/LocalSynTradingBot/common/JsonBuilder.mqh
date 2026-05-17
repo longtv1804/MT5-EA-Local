@@ -40,14 +40,18 @@ public:
 
 	void Set(string key, iPosition& pos)
 	{
-		Set(key, ToJson(pos));
+		string pos_jstr = ToJson(pos);
+		string text = "\"" + key + "\":" + pos_jstr;
+		int size = ArraySize(mJsonData);
+		ArrayResize(mJsonData, size + 1);
+		mJsonData[size] = text;
 	}
 
 	void Set(string key, iPosition& arr[])
 	{
 		int size = ArraySize(arr);
 		string jsonData = "[";
-		jsonData += "\"curent_positions\":[";
+		jsonData += "[";
 		for(int i = 0; i < size; i++)
 		{
 			jsonData += ToJson(arr[i]);
@@ -55,7 +59,11 @@ public:
 				jsonData += ",";
 		}
 		jsonData += "]";
-		Set(key, jsonData);
+
+		string text = "\"" + key + "\":" + jsonData;
+		size = ArraySize(mJsonData);
+		ArrayResize(mJsonData, size + 1);
+		mJsonData[size] = text;
 	}
 
 	string Build()

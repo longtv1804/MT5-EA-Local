@@ -190,9 +190,9 @@ private:
 public:
     CPT_ClientTerminal(double weight) 
     :   CPT_LocalTerminal(),
-        mSession(eCPT_MODE_SERVER, 0, weight) 
+        mSession(eCPT_MODE_CLIENT, 0, weight) 
     {
-        m_state = eSERVER_CONN_STATE_UNKNOWN;
+        SetConnectionState(eSERVER_CONN_STATE_UNKNOWN);
     }
 
     /*
@@ -206,6 +206,7 @@ public:
     bool Init(CPT_InOutManager* inOutController) override
     {
         CPT_LocalTerminal::Init(inOutController);
+        m_pInOutManager.InitFilesPath();
 
         // 1: load previous session và kiểm tra
         CPT_CopyTradeSession previousSession();
@@ -313,6 +314,10 @@ public:
                 TerminalAPI::DoShowMessagePopup("WARNING init CLIENT: client đang có sẵn các Position!");
             }
         }
+        if (res)
+        {
+            SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
+        }
         return res;
     }
 
@@ -337,25 +342,46 @@ public:
     ***********************************************************************************/
     void OnPositionAdded(iPosition& newPos) override
     {
+        int queue_size = ArraySize(mCopyTradeEventQueue);
+
         // sau khi position added: cần check lại và update event thành DONE
-        if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
+        bool isCopyTradePositionAdded = false;
+        if (queue_size > 0 && mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
         {
             if (mCopyTradeEventQueue[0].tracking_number == newPos.magic_number)
             {
+                isCopyTradePositionAdded = true;
                 mCopyTradeEventQueue[0].status = EVS_DONE;
+                mCopyTradeEventQueue[0].target_ticket = newPos.position_ticket;
             }
+        }
+
+        // nếu ko phải postion cho copy trade, thì add nó ở dạng [0, pos-id]
+        if (isCopyTradePositionAdded == false)
+        {
+            mSession.AddCopyTradPosition(0, newPos.position_ticket);
         }
     }
 
     void OnPositionClosed(iPosition& closedPos) override
     {
+        int queue_size = ArraySize(mCopyTradeEventQueue);
+
         // sau khi position closed, cần check lại và update event thành DONE
-        if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
+        bool isCopyTradePositionClosed = false;
+        if (queue_size > 0 && mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
         {
             if (mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
             {
+                isCopyTradePositionClosed = true;
                 mCopyTradeEventQueue[0].status = EVS_DONE;
             }
+        }
+
+        // nếu ko phải postion cho copy trade, thì thử remove nó
+        if (isCopyTradePositionClosed == false)
+        {
+            mSession.RemoveCopyTradePosition(0, closedPos.position_ticket);
         }
     }
 
@@ -373,12 +399,23 @@ private:
         eSERVER_CONN_STATE_CONNECTED                // trao đổi thông tin
     };
     EnumServerConnectionState m_state;
+    static string StateToString(EnumServerConnectionState state)
+    {
+        switch (state)
+        {
+            case eSERVER_CONN_STATE_DISCONNECTED: return "DISCONNECTED";
+            case eSERVER_CONN_STATE_CONNECTING: return "CONNECTING";
+            case eSERVER_CONN_STATE_CONNECTED: return "CONNECTED";
+            default:
+                return "UNKNOWN";
+        }
+    }
     void SetConnectionState(EnumServerConnectionState newState)
     {
         if (m_state != newState)
         {
             m_state = newState;
-            LOGD("Connection state change: " + (string)m_state + "-" + ToString(m_state));
+            LOGD("Connection state change: " + (string)StateToString(m_state));
         }
     }
 
@@ -406,6 +443,7 @@ private:
     */
     void Disconnected_OnServerInputFileDetected()
     {
+        LOGD("SERVER File is detected.");
         m_pInOutManager.SeekToEndInputFile();
         m_pInOutManager.Init();
         SetConnectionState(eSERVER_CONN_STATE_CONNECTING);
@@ -654,7 +692,7 @@ private:
                 }
                 case eCMD_CPT_POS_ADDED:
                 {
-                    PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    PositonJsonStr = ParseJsonValue(cmdStr, "position_info");
                     iPosition newPos = ParseJsonToPosition(PositonJsonStr);
                     serverSession = ParseIntValue(cmdStr, "session_id");
                     OnServer_NewPositionAdded(serverSession, newPos);
@@ -662,7 +700,7 @@ private:
                 }
                 case eCMD_CPT_POS_CLOSED:
                 {
-                    PositonJsonStr = ParseJsonValue(cmdStr, "positon_info");
+                    PositonJsonStr = ParseJsonValue(cmdStr, "position_info");
                     iPosition closedPos = ParseJsonToPosition(PositonJsonStr);
                     serverSession = ParseIntValue(cmdStr, "session_id");
                     OnServer_NewPositionAdded(serverSession, closedPos); 

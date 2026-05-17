@@ -29,9 +29,20 @@ public:
     *  init/terminate function
     *
     ***********************************************************************************/
-private:
+public:
+    CPT_InOutManager()
+    {
+        mInputFile = "";
+        mOutputFile = "";
+        mOutputFileId = 0;
+    }
     bool InitFilesPath()
     {
+        if (mInputFile != "" && mOutputFile != "")
+        {
+            LOGE("FilePaths are initialized");
+            return false;
+        }
         int i = 0, size = 0;
         bool isFileExisted = false;
         if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_SERVER)
@@ -47,7 +58,7 @@ private:
             }
 
             // no need detect input file path
-            mInputFile = "";
+            mInputFile = mOutputFile;
         }
         else if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_CLIENT)
         {
@@ -126,7 +137,11 @@ public:
         }
 
         // init input và output file paths
-        bool res = InitFilesPath();
+        bool res = true;
+        if (mInputFile == "" || mOutputFile == "")
+        {
+            res = InitFilesPath();
+        }
         if (res)
         {
             res = CreateOutputFile();
@@ -187,7 +202,7 @@ public:
 
         long handle;
         string file;
-        int attr = 0;
+        int attr = FILE_COMMON;
 
         ArrayResize(clientIdList, 0);
 
@@ -243,6 +258,7 @@ public:
             // nếu vị trí đọc cũ lớn hơn file, thì reset về 0 và đọc lại từ đầu.
             FileSeek(handle, 0, SEEK_END);
             mLastReadPosition = FileTell(handle);
+            FileClose(handle);
         }
         else
         {
@@ -280,16 +296,6 @@ public:
         int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
-            // Check file size before seeking
-            // nếu vị trí đọc cũ lớn hơn file, thì reset về 0 và đọc lại từ đầu.
-            FileSeek(handle, 0, SEEK_END);
-            ulong end_pos = FileTell(handle);
-            if (end_pos < mLastReadPosition)
-            {
-                LOGD("File size (" + (string)end_pos + ") is less than last read position (" + (string)mLastReadPosition + "). Resetting read position.");
-                mLastReadPosition = 0;
-            }
-
             FileSeek(handle, mLastReadPosition, SEEK_SET);
             while(!FileIsEnding(handle))
             {

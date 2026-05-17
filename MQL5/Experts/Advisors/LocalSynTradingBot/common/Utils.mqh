@@ -10,7 +10,7 @@
 //=======================================================================================
 string ToString(iPosition &info)
 {
-	return StringFormat("[TICKET: %d - Symbol:%s - Type:%s - Status:%s - Volume:%.2f priceOpen:%.3f ]",
+	return StringFormat("[position_ticket:%d, Symbol:%s, position_type:%s, Status:%s, volume:%.2f price_open:%.3f ]",
 		info.position_ticket,
 		info.symbol,
 		PositionTypeToString(info.position_type),

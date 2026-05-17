@@ -104,6 +104,12 @@ public:
             mCopyTradeSessionId = MathRand();
         }
         LOGD("SERVER session=" + (string)mCopyTradeSessionId);
+
+        if (res)
+        {
+            LOGD("Init CPT_InOutManager...");
+            res = inOutController.Init();
+        }
         return res;
     }
 
@@ -134,8 +140,9 @@ public:
         static int s_pollCount = 0;
         int i = 0, j = 0;
         bool isExisted = false;
-        if (s_pollCount % 5 == 0)
+        if (s_pollCount % 5 == 4)
         {
+            s_pollCount = 0;
             int currList[];
             int currNumber = m_pInOutManager.GetClientList(currList);
             bool changed = false;
@@ -173,7 +180,7 @@ public:
                 if (isExisted == false)
                 {
                     changed = true;
-                    LOGD("missing Client[" + (string)currList[i] + "]");
+                    LOGD("missing Client[" + (string)mClientList[i] + "]");
                 }
             }
 
@@ -184,10 +191,7 @@ public:
                 mClientNumber = currNumber;
             }
         }
-        else
-        {
-            s_pollCount += 1;
-        }
+        s_pollCount += 1;
     }
 
     /**********************************************************************************
@@ -215,7 +219,7 @@ private:
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_ADDED);
         builder.Set("session_id", (string)mCopyTradeSessionId);
-        builder.Set("positon_info", newPos);
+        builder.Set("position_info", newPos);
         
         m_pInOutManager.SendData(builder.Build());
     }
@@ -225,7 +229,7 @@ private:
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_CLOSED);
         builder.Set("session_id", (string)mCopyTradeSessionId);
-        builder.Set("positon_info", closedPos);
+        builder.Set("position_info", closedPos);
         
         m_pInOutManager.SendData(builder.Build());
     }

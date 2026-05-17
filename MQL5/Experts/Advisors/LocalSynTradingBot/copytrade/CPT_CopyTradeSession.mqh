@@ -72,8 +72,8 @@ public:
 
     void SetSessionId(int id)
     {
-        mSessionId = id;
         LOGD("Session changed " + (string)mSessionId + " -> " + (string)id);
+        mSessionId = id;
     }
 
     int GetSessionId() const
@@ -380,6 +380,7 @@ public:
     void RemoveCopyTradePosition(ulong server_posId, ulong myPosId)
     {
         int size = ArraySize(mTradingMap);
+        bool isRemove = false;
         for (int i = 0; i < size; i += 2)
         {
             if (mTradingMap[i] == server_posId && mTradingMap[i+1] == myPosId)
@@ -390,12 +391,13 @@ public:
                     mTradingMap[j + 1]  = mTradingMap[j + 2 + 1];
                 }
                 ArrayResize(mTradingMap, size - 2);
+                isRemove = true;
                 break;
             }
-            else
-            {
-                LOGE("ERROR: no trading data match {" + (string)server_posId + "," + (string)myPosId + "}");
-            }
+        }
+        if (!isRemove)
+        {
+            LOGE("ERROR: no trading data match {" + (string)server_posId + "," + (string)myPosId + "}");
         }
     }
 

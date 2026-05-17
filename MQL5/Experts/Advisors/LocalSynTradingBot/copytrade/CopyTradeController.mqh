@@ -43,17 +43,8 @@ public:
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
 
-        bool isInitOk = false;
-        
-        isInitOk = m_MyTerminal.Init(&mInOutMgr);
-        if (!isInitOk)
-        {
-            return false;
-        }
-
-        isInitOk = mInOutMgr.Init();
-        mIsInitSuccessed = isInitOk;
-        return isInitOk;
+        mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
+        return mIsInitSuccessed;
     }
 
     void Terminate()
