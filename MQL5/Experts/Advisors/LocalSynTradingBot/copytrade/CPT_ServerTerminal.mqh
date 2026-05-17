@@ -109,6 +109,7 @@ public:
 
     void Terminate() override
     {
+        LOGD("terminate ServerTerminal...");
         iPosition posArr[];
         TerminalAPI::DoGetAllPosition(posArr);
         int size = ArraySize(posArr);

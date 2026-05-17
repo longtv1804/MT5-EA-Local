@@ -318,6 +318,7 @@ public:
 
     void Terminate() override
     {
+        LOGD("terminate ClientTerminal...");
         int copyTradePosNum = mSession.GetCptPositionNumber();
         mSession.SaveSession();
 

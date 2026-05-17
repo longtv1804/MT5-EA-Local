@@ -9,10 +9,12 @@ class CopyTradeController
 {
     CPT_LocalTerminal* m_MyTerminal;
     CPT_InOutManager mInOutMgr;
+    bool mIsInitSuccessed;
 
 public:
     CopyTradeController()
     {
+        mIsInitSuccessed = false;
     }
 
     ~CopyTradeController()
@@ -50,15 +52,19 @@ public:
         }
 
         isInitOk = mInOutMgr.Init();
+        mIsInitSuccessed = isInitOk;
         return isInitOk;
     }
 
     void Terminate()
     {
-        if (m_MyTerminal)
+        // chỉ khi init thành công mới save data
+        if (m_MyTerminal && mIsInitSuccessed)
         {
             m_MyTerminal.Terminate();
         }
+
+        // luôn luôn xóa file output
         mInOutMgr.Terminate();
     }
 
@@ -107,7 +113,6 @@ public:
 
                 // Lấy loại position BUY / SELL
                 ENUM_DEAL_TYPE dealType = (ENUM_DEAL_TYPE)HistoryDealGetInteger(trans.deal, DEAL_TYPE);
-
                 if(dealType == DEAL_TYPE_BUY)
                     newPosition.position_type = ePOSITION_TYPE_BUY;
                 else if(dealType == DEAL_TYPE_SELL)
@@ -128,6 +133,14 @@ public:
                 ZeroMemory(closedPosition);
 
                 closedPosition.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
+
+                // Lấy loại position BUY / SELL
+                ENUM_DEAL_TYPE dealType = (ENUM_DEAL_TYPE)HistoryDealGetInteger(trans.deal, DEAL_TYPE);
+                if(dealType == DEAL_TYPE_BUY)
+                    closedPosition.position_type = ePOSITION_TYPE_BUY;
+                else if(dealType == DEAL_TYPE_SELL)
+                    closedPosition.position_type = ePOSITION_TYPE_SELL;
+                
                 closedPosition.symbol          = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
                 closedPosition.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
                 closedPosition.magic_number    =  HistoryDealGetInteger(trans.deal, DEAL_MAGIC);

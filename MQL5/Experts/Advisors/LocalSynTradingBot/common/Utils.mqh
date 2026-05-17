@@ -376,8 +376,8 @@ string ToJson(const iPosition &info)
 	string json = "{";
 	json += "\"position_ticket\":" + IntegerToString(info.position_ticket) + ",";
 	json += "\"symbol\":\"" + info.symbol + "\",";
-	json += "\"position_type\":\"" + PositionTypeToString(info.position_type) + "\",";
-	json += "\"status\":\"" + PositionStatusToString(info.status) + "\",";
+	json += "\"position_type\":\"" + IntegerToString(info.position_type) + "\",";
+	json += "\"status\":\"" + IntegerToString(info.status) + "\",";
 	json += "\"volume\":" + DoubleToString(info.volume, 2) + ",";
 	json += "\"price_open\":" + DoubleToString(info.price_open, 5) + ",";
 	json += "}";

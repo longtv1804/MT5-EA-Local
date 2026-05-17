@@ -61,10 +61,7 @@ int OnInit()
 
 void OnDeinit(const int reason)
 {
-    if(reason == REASON_INITFAILED)
-    {
-        g_CopyTradeController.Terminate();
-    }
+    g_CopyTradeController.Terminate();
     EventKillTimer();
     LOGD("*************** EA FINISH ***************");
 }

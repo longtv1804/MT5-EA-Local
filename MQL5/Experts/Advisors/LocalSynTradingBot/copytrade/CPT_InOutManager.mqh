@@ -142,6 +142,7 @@ public:
     // client: terminate khi mà mất kết nối server hoặc close EA
     void Terminate()
     {
+        LOGD("terminate InOutManager...");
         RemoveOutputFile();
         mOutputFileId = 0;
         mLastReadPosition = 0;
