@@ -48,6 +48,7 @@ public:
         int closedPosNum  = ArraySize(closedPosition);
         int newPosNum     = ArraySize(newPosition);
         LOGD("previous mode=" + ToString(previousSession.GetMode()) + 
+                                " previous-ss:" + (string)previousSession.GetSessionId() + 
                                 " currentPosNum=" + (string)currentPosNum + 
                                 " closedPosNum=" + (string)closedPosNum + 
                                 " newPosNum=" + (string)newPosNum);
@@ -102,6 +103,7 @@ public:
             }
             mCopyTradeSessionId = MathRand();
         }
+        LOGD("SERVER session=" + (string)mCopyTradeSessionId);
         return res;
     }
 
@@ -110,12 +112,7 @@ public:
         iPosition posArr[];
         TerminalAPI::DoGetAllPosition(posArr);
         int size = ArraySize(posArr);
-        // no need save session if the size is 0
-        if (size <= 0)
-        {
-            LOGD("ignore save session because of no position");
-            return;
-        }
+
         CPT_CopyTradeSession session(eCPT_MODE_SERVER, mCopyTradeSessionId, 0);
         for(int i = 0; i < size; i++)
         {

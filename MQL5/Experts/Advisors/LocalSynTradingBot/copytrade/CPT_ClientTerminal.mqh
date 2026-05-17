@@ -319,10 +319,7 @@ public:
     void Terminate() override
     {
         int copyTradePosNum = mSession.GetCptPositionNumber();
-        if (copyTradePosNum > 0)
-        {
-            mSession.SaveSession();
-        }
+        mSession.SaveSession();
 
         // check event queue: logging out
         int size = ArraySize(mCopyTradeEventQueue);

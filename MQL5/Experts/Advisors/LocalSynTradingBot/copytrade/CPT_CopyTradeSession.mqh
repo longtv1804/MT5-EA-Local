@@ -330,11 +330,6 @@ public:
     void SaveSession()
     {
         int size = ArraySize(mTradingMap);
-        if (size <= 0)
-        {
-            LOGD("ignore save session because of no position");
-            return;
-        }
         JsonBuilder builder;
         builder.Set("cpt_mode", (string)mCptMode);
         builder.Set("session_id", (string)mSessionId);
