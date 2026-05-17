@@ -67,7 +67,7 @@ public:
 
     void ClearTradingData()
     {
-        ArrayResize(arr, 0);
+        ArrayResize(mTradingMap, 0);
     }
 
     void SetSessionId(int id)

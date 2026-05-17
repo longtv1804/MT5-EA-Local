@@ -58,8 +58,8 @@ public:
         {
             // không có position nào đang chạy
             if (currentPosNum >  0)
-                TerminalAPI::DoShowMessagePopup("WARNING: CLIENT -> SERVER\n
-                            có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
+            {
+                TerminalAPI::DoShowMessagePopup("WARNING: CLIENT -> SERVER: có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
             }
             mCopyTradeSessionId = MathRand();
         }
@@ -98,8 +98,7 @@ public:
         {
             if (currentPosNum > 0)
             {
-                TerminalAPI::DoShowMessagePopup("WARNING: SERVER\n
-                            có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
+                TerminalAPI::DoShowMessagePopup("WARNING: SERVER: có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
             }
             mCopyTradeSessionId = MathRand();
         }

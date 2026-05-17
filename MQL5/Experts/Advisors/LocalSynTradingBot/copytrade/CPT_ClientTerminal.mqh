@@ -250,8 +250,7 @@ public:
                 }
                 else
                 {
-                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: \n
-                                                    Same previous session but weith is different");
+                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: Same previous session but weith is different");
                     res = false;
                 }
             }
@@ -265,8 +264,7 @@ public:
                 }
                 else
                 {
-                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: \n
-                                                    Same previous session but weith is different");
+                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: Same previous session but weith is different");
                     res = false;
                 }
             }
@@ -287,7 +285,7 @@ public:
         else if (previousSession.GetMode() == eCPT_MODE_SERVER)
         {
             ulong oldMap[];
-            previousSession.GetTradingData();
+            previousSession.GetTradingData(oldMap);
             int tradingDataSize = ArraySize(oldMap);
             bool isOldTradeIsExisted = false;
             for (i = 0; i < tradingDataSize; i += 2)
@@ -303,8 +301,7 @@ public:
             }
             if (isOldTradeIsExisted)
             {
-                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT:\n
-                                                client đang có sẵn các Position của position trước đó!! hãy kiểm tra");
+                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: client đang có sẵn các Position của position trước đó!! hãy kiểm tra");
                 res = false;
             }
         }
@@ -313,8 +310,7 @@ public:
         {
             if (currentPosNum > 0)
             {
-                TerminalAPI::DoShowMessagePopup("WARNING init CLIENT:\n
-                                                client đang có sẵn các Position!");
+                TerminalAPI::DoShowMessagePopup("WARNING init CLIENT: client đang có sẵn các Position!");
             }
         }
         return res;
@@ -532,13 +528,12 @@ private:
 
                 int server_posNum = ArraySize(server_positions);
                 int now_client_posNum = ArraySize(now_client_positions);
-                int pre_client_posNum = mSessionmSession.GetClientPositionNumer();
-                LOGD("CMD-UPDATE detected:" 
-                                            " remote-session:" + (string)server_sessionId + 
+                int pre_client_posNum = mSession.GetClientPositionNumer();
+                LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + 
                                             " my-session:" +(string)mSession.GetSessionId() + 
                                             " server-posnum:" + (string)server_posNum +
                                             " client-posnum:" + (string)now_client_posNum +
-                                            " pre-client-posnum:" + (string)pre_client_posNum +);
+                                            " pre-client-posnum:" + (string)pre_client_posNum);
 
                 //*********************************************************************************
                 // A, xác định session-id
@@ -561,11 +556,9 @@ private:
                 // 3, client-session != server-sesion:
                 else //if (server_sessionId != mSession.GetSessionId())
                 {
-                    if (client_posNum > 0)
+                    if (now_client_posNum > 0)
                     {
-                        TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: \n
-                                                        client-server missmatch session id và client tồn tại position chưa close!!\n
-                                                        hãy kiểm tra lại!!!");
+                        TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: client-server missmatch session id và client tồn tại position chưa close!! hãy kiểm tra lại!!!");
                         TerminalAPI::DoCloseEA();
                         return;
                     }
@@ -586,6 +579,7 @@ private:
 
                 // 1, remove những pair ko còn tồn tại
                 int i = 0, j = 0;
+                bool isExisted = false;
                 for (i = 0; i < tradingMapSize; i += 2)
                 {
                     isExisted = false;
@@ -633,7 +627,7 @@ private:
                 //*********************************************************************************
                 SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
 
-                string remain_cmds[] = {0};
+                string remain_cmds[];
                 ArrayResize(remain_cmds, cmdListSize - cmd_idx - 1);
                 for (i = cmd_idx + 1; i < cmdListSize; i++)
                 {
