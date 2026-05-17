@@ -65,6 +65,11 @@ public:
         mWeight = weight;
     }
 
+    void ClearTradingData()
+    {
+        ArrayResize(arr, 0);
+    }
+
     void SetSessionId(int id)
     {
         mSessionId = id;
@@ -377,12 +382,12 @@ public:
         mTradingMap[size + 1] = myPosId;
     }
 
-    void RemoveCopyTradePosition(ulong myPosId)
+    void RemoveCopyTradePosition(ulong server_posId, ulong myPosId)
     {
         int size = ArraySize(mTradingMap);
         for (int i = 0; i < size; i += 2)
         {
-            if (mTradingMap[i+1] == myPosId)
+            if (mTradingMap[i] == server_posId && mTradingMap[i+1] == myPosId)
             {
                 for (int j = i; j < size - 2; j += 2)
                 {
@@ -391,6 +396,10 @@ public:
                 }
                 ArrayResize(mTradingMap, size - 2);
                 break;
+            }
+            else
+            {
+                LOGE("ERROR: no trading data match {" + (string)server_posId + "," + (string)myPosId + "}");
             }
         }
     }
