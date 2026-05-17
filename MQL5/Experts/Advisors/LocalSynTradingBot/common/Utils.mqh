@@ -1,5 +1,5 @@
-#define LOGD(msg) Print("\tD\t", __FUNCTION__, "\t", msg)
-#define LOGE(msg) Print("\tE\t", __FUNCTION__, "\t", msg)
+#define LOGD(msg) Print("\tD\t", __FUNCTION__, "()\t", msg)
+#define LOGE(msg) Print("\tE\t", __FUNCTION__, "()\t", msg)
 
 #include "Types.mqh"
 
@@ -378,7 +378,7 @@ string ToJson(const iPosition &info)
 	json += "\"position_type\":\"" + IntegerToString(info.position_type) + "\",";
 	json += "\"status\":\"" + IntegerToString(info.status) + "\",";
 	json += "\"volume\":" + DoubleToString(info.volume, 2) + ",";
-	json += "\"price_open\":" + DoubleToString(info.price_open, 5) + ",";
+	json += "\"price_open\":" + DoubleToString(info.price_open, 5);
 	json += "}";
 	return json;
 }

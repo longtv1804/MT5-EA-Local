@@ -159,7 +159,6 @@ public:
     {
         LOGD("terminate InOutManager...");
         RemoveOutputFile();
-        mOutputFileId = 0;
         mLastReadPosition = 0;
     }
 

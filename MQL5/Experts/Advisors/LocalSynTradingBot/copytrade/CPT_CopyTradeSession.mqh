@@ -375,6 +375,7 @@ public:
         ArrayResize(mTradingMap, size + 2);
         mTradingMap[size] = serverPosId;
         mTradingMap[size + 1] = myPosId;
+        LOGD("CPT added: {" + (string)serverPosId + ", " + (string)myPosId +"}");
     }
 
     void RemoveCopyTradePosition(ulong server_posId, ulong myPosId)
@@ -392,6 +393,7 @@ public:
                 }
                 ArrayResize(mTradingMap, size - 2);
                 isRemove = true;
+                LOGD("CPT remove: {" + (string)server_posId + ", " + (string)myPosId +"}");
                 break;
             }
         }

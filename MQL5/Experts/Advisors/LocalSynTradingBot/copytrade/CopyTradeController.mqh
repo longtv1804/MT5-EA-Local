@@ -81,7 +81,6 @@ public:
                             const MqlTradeRequest& request,
                             const MqlTradeResult& result)
     {
-        LOGD("TRANS: " + EnumToString(trans.type));
         if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
         {
             if(!HistoryDealSelect(trans.deal))

@@ -455,7 +455,8 @@ private:
     */
     void Connecting_OnServerDisconnection()
     {
-        SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
+        m_pInOutManager.Terminate();
+        SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
     }
 
     /*

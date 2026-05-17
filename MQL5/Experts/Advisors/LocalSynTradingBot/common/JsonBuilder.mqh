@@ -51,7 +51,6 @@ public:
 	{
 		int size = ArraySize(arr);
 		string jsonData = "[";
-		jsonData += "[";
 		for(int i = 0; i < size; i++)
 		{
 			jsonData += ToJson(arr[i]);
