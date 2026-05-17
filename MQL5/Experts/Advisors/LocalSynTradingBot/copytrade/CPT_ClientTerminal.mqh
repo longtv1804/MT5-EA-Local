@@ -460,10 +460,105 @@ private:
     }
 
     /*
-    *   khi server bị tắt đột ngội thì client remove các file output đi.
+    *   thực hiện update data theo server
     */
-    void Connecting_OnServerUpdate()
+    void Connecting_OnServerUpdate(int server_sessionId, iPosition &server_positions[], iPosition &now_client_positions[])
     {
+        int server_posNum = ArraySize(server_positions);
+        int now_client_posNum = ArraySize(now_client_positions);
+        int pre_client_posNum = mSession.GetClientPositionNumer();
+        LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + 
+                                    " my-session:" +(string)mSession.GetSessionId() + 
+                                    " server-posnum:" + (string)server_posNum +
+                                    " client-posnum:" + (string)now_client_posNum +
+                                    " pre-client-posnum:" + (string)pre_client_posNum);
+
+        //*********************************************************************************
+        // A, xác định session-id
+        //     1, client-session = 0: lấy theo server-session
+        //     2, client-session == server-session: giữ nguyên ssid
+        //     3, client-session != server-session:
+        //          + nếu client ko có position nào: lấy server-session
+        //          + nếu client có position -> noti ERRIRO, close EA
+        //*********************************************************************************
+        // 1, client-session = 0:
+        if (mSession.GetSessionId() == 0)
+        {
+            mSession.SetSessionId(server_sessionId);
+        }
+        // 2, client-session == server-sesion:
+        else if (server_sessionId == mSession.GetSessionId())
+        {
+            // keep current ssid
+        }
+        // 3, client-session != server-sesion:
+        else //if (server_sessionId != mSession.GetSessionId())
+        {
+            if (now_client_posNum > 0)
+            {
+                TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: client-server missmatch session id và client tồn tại position chưa close!! hãy kiểm tra lại!!!");
+                TerminalAPI::DoCloseEA();
+                return;
+            }
+            else
+            {
+                mSession.SetSessionId(server_sessionId);
+            }
+        }
+
+        //*********************************************************************************
+        // B, update thông tin session theo thực trạng
+        //      1, lấy now-position update vào mSession: [0, posid]
+        //      2, lấy server-position update vào mSession: [sever-posid, 0]
+        //*********************************************************************************
+        ulong tradingMap[];
+        mSession.GetTradingData(tradingMap);
+        int tradingMapSize = ArraySize(tradingMap);
+
+        // 1, remove những pair ko còn tồn tại
+        int i = 0, j = 0;
+        bool isExisted = false;
+        for (i = 0; i < tradingMapSize; i += 2)
+        {
+            isExisted = false;
+            // check tồn tại trong server_positions ko?
+            if (tradingMap[i] != 0)
+            {
+                for (j = 0; j < server_posNum; j++) {
+                    if (server_positions[j].position_ticket == tradingMap[i]) { isExisted = true; break; }
+                }
+            }
+            // check tồn tại trong now_client_positions ko?
+            if (isExisted && tradingMap[i + 1] != 0)
+            {
+                for (j = 0; j < now_client_posNum; j++) {
+                    if (now_client_positions[j].position_ticket == tradingMap[i + 1]) { isExisted = true; break; }
+                }
+            }
+            if (!isExisted)
+            {
+                mSession.RemoveCopyTradePosition(tradingMap[i], tradingMap[i + 1]);
+            }
+        }
+
+        // 2, lấy now-position update vào mSession: [0, posid]
+        for (i = 0; i < now_client_posNum; i++)
+        {
+            if (mSession.HasClientTicket(now_client_positions[i].position_ticket) == false)
+            {
+                mSession.AddCopyTradPosition(0, now_client_positions[i].position_ticket);
+            }
+        }
+
+        // 3, lấy server-position update vào mSession: [sever-posid, 0]
+        for (i = 0; i < server_posNum; i++)
+        {
+            if (mSession.HasServerTicket(server_positions[i].position_ticket) == false)
+            {
+                mSession.AddCopyTradPosition(server_positions[i].position_ticket, 0);
+            }
+        }
+
         SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
     }
 
@@ -564,110 +659,12 @@ private:
                 iPosition now_client_positions[];
                 TerminalAPI::DoGetAllPosition(now_client_positions);
 
-                int server_posNum = ArraySize(server_positions);
-                int now_client_posNum = ArraySize(now_client_positions);
-                int pre_client_posNum = mSession.GetClientPositionNumer();
-                LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + 
-                                            " my-session:" +(string)mSession.GetSessionId() + 
-                                            " server-posnum:" + (string)server_posNum +
-                                            " client-posnum:" + (string)now_client_posNum +
-                                            " pre-client-posnum:" + (string)pre_client_posNum);
+                Connecting_OnServerUpdate(server_sessionId, server_positions, now_client_positions);
 
-                //*********************************************************************************
-                // A, xác định session-id
-                //     1, client-session = 0: lấy theo server-session
-                //     2, client-session == server-session: giữ nguyên ssid
-                //     3, client-session != server-session:
-                //          + nếu client ko có position nào: lấy server-session
-                //          + nếu client có position -> noti ERRIRO, close EA
-                //*********************************************************************************
-                // 1, client-session = 0:
-                if (mSession.GetSessionId() == 0)
-                {
-                    mSession.SetSessionId(server_sessionId);
-                }
-                // 2, client-session == server-sesion:
-                else if (server_sessionId == mSession.GetSessionId())
-                {
-                    // keep current ssid
-                }
-                // 3, client-session != server-sesion:
-                else //if (server_sessionId != mSession.GetSessionId())
-                {
-                    if (now_client_posNum > 0)
-                    {
-                        TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: client-server missmatch session id và client tồn tại position chưa close!! hãy kiểm tra lại!!!");
-                        TerminalAPI::DoCloseEA();
-                        return;
-                    }
-                    else
-                    {
-                        mSession.SetSessionId(server_sessionId);
-                    }
-                }
-
-                //*********************************************************************************
-                // B, update thông tin session theo thực trạng
-                //      1, lấy now-position update vào mSession: [0, posid]
-                //      2, lấy server-position update vào mSession: [sever-posid, 0]
-                //*********************************************************************************
-                ulong tradingMap[];
-                mSession.GetTradingData(tradingMap);
-                int tradingMapSize = ArraySize(tradingMap);
-
-                // 1, remove những pair ko còn tồn tại
-                int i = 0, j = 0;
-                bool isExisted = false;
-                for (i = 0; i < tradingMapSize; i += 2)
-                {
-                    isExisted = false;
-                    // check tồn tại trong server_positions ko?
-                    if (tradingMap[i] != 0)
-                    {
-                        for (j = 0; j < server_posNum; j++) {
-                            if (server_positions[j].position_ticket == tradingMap[i]) { isExisted = true; break; }
-                        }
-                    }
-                    // check tồn tại trong now_client_positions ko?
-                    if (isExisted && tradingMap[i + 1] != 0)
-                    {
-                        for (j = 0; j < now_client_posNum; j++) {
-                            if (now_client_positions[j].position_ticket == tradingMap[i + 1]) { isExisted = true; break; }
-                        }
-                    }
-                    if (!isExisted)
-                    {
-                        mSession.RemoveCopyTradePosition(tradingMap[i], tradingMap[i + 1]);
-                    }
-                }
-
-                // 2, lấy now-position update vào mSession: [0, posid]
-                for (i = 0; i < now_client_posNum; i++)
-                {
-                    if (mSession.HasClientTicket(now_client_positions[i].position_ticket) == false)
-                    {
-                        mSession.AddCopyTradPosition(0, now_client_positions[i].position_ticket);
-                    }
-                }
-
-                // 3, lấy server-position update vào mSession: [sever-posid, 0]
-                for (i = 0; i < server_posNum; i++)
-                {
-                    if (mSession.HasServerTicket(server_positions[i].position_ticket) == false)
-                    {
-                        mSession.AddCopyTradPosition(server_positions[i].position_ticket, 0);
-                    }
-                }
-
-                //*********************************************************************************
-                // C,  Chuyển trạng thái 
-                //  và chuyển cmd còn lại sang Connected_HandleServerCommands
-                //*********************************************************************************
-                SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
-
+                // chuyển cmd còn lại sang Connected_HandleServerCommands
                 string remain_cmds[];
                 ArrayResize(remain_cmds, cmdListSize - cmd_idx - 1);
-                for (i = cmd_idx + 1; i < cmdListSize; i++)
+                for (int i = cmd_idx + 1; i < cmdListSize; i++)
                 {
                     remain_cmds[i - cmd_idx - 1] = cmdList[i];
                 }
