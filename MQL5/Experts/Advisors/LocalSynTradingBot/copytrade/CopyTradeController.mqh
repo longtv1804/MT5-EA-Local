@@ -92,8 +92,7 @@ public:
             long entry = HistoryDealGetInteger(trans.deal, DEAL_ENTRY);
             if(entry == DEAL_ENTRY_IN)
             {
-                iPosition newPosition;
-                ZeroMemory(newPosition);
+                iPosition newPosition = {0};
 
                 ulong positionId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
 
@@ -120,8 +119,7 @@ public:
             }
             else if(entry == DEAL_ENTRY_OUT)
             {
-                iPosition closedPosition;
-                ZeroMemory(closedPosition);
+                iPosition closedPosition = {0};
 
                 closedPosition.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
 
@@ -183,7 +181,7 @@ public:
         //==================================================
         // Detect CLOSED positions
         //==================================================
-        iPosition closedPos;
+        iPosition closedPos = {0};
         for(i = 0; i < prev_total; i++)
         {
             ticket = mPositions[i].position_ticket;

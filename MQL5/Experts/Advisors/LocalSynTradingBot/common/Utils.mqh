@@ -10,7 +10,7 @@
 //=======================================================================================
 string ToString(iPosition &info)
 {
-	return StringFormat("[position_ticket:%d, Symbol:%s, position_type:%s, Status:%s, volume:%.2f price_open:%.3f ]",
+	return StringFormat("[position_ticket:%I64u, Symbol:%s, position_type:%s, Status:%s, volume:%.2f price_open:%.3f ]",
 		info.position_ticket,
 		info.symbol,
 		PositionTypeToString(info.position_type),
@@ -121,7 +121,7 @@ string ToString(EnumCopyTradeMode mode)
 
 string ToString(const CopyTradeEvent &ev)
 {
-	return StringFormat("[id=%d, status:%s, Type:%d, retry_count:%d, server_ticket:%d, volume:%.3f, target_ticket:%d, tracking_number:%d]",
+	return StringFormat("{id=%d, status:%d, Type:%d, retry_count:%d, server_ticket:%I64u, volume:%.3f, target_ticket:%I64u, tracking_number:%d}",
 		ev.eventId,
 		ev.status,
 		ev.position_type,
@@ -197,8 +197,7 @@ string GetJsonString(const string json, const string key)
 // Static function: Parse a single JSON object to iPosition
 iPosition ParseJsonToPosition(const string jsonObj)
 {
-	iPosition info;
-	ZeroMemory(info);
+	iPosition info = {0};
 	int fpos;
 	fpos = StringFind(jsonObj, "\"position_ticket\":");
 	if(fpos>=0) info.position_ticket = StringToInteger(GetJsonValue(jsonObj, "position_ticket"));

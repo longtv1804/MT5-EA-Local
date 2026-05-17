@@ -157,6 +157,7 @@ private:
         int size = ArraySize(mCopyTradeEventQueue);
         ArrayResize(mCopyTradeEventQueue, size + 1);
         mCopyTradeEventQueue[size] = ev;
+        LOGD("event=" + ToString(ev));
         if (size == 0)
         {
             Execute();
@@ -703,7 +704,7 @@ private:
                     PositonJsonStr = ParseJsonValue(cmdStr, "position_info");
                     iPosition closedPos = ParseJsonToPosition(PositonJsonStr);
                     serverSession = ParseIntValue(cmdStr, "session_id");
-                    OnServer_NewPositionAdded(serverSession, closedPos); 
+                    OnServer_PositionClosed(serverSession, closedPos); 
                     break;
                 }
                 default:
@@ -715,13 +716,13 @@ private:
 
     void OnServer_NewPositionAdded(int session, iPosition &newPos)
     {
-        LOGD("new remote position, session: " + (string)session + " " + ToString(newPos));
+        LOGD("session: " + (string)session + " " + ToString(newPos));
         if (session != mSession.GetSessionId())
         {
             LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
             return;
         }
-        CopyTradeEvent ev;
+        CopyTradeEvent ev = {0};
         ev.eventId = EV_ADD_NEW_POSITION;
         ev.server_ticket = newPos.position_ticket;
         ev.position_type = newPos.position_type;
@@ -731,7 +732,7 @@ private:
 
     void OnServer_PositionClosed(int session, iPosition &closedPos)
     {
-        LOGD("remote position closed, session: " + (string)session + " " + ToString(closedPos));
+        LOGD("session: " + (string)session + " " + ToString(closedPos));
         if (session != mSession.GetSessionId())
         {
             LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
@@ -743,7 +744,7 @@ private:
             LOGD("can not find the target - server-ticket" + (string)closedPos.position_ticket);
             return;
         }
-        CopyTradeEvent ev;
+        CopyTradeEvent ev = {0};
         ev.eventId = EV_CLOSED_POSITION;
         ev.server_ticket = closedPos.position_ticket;
         ev.volume = closedPos.volume * mSession.GetWeight();
