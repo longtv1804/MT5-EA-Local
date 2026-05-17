@@ -408,7 +408,19 @@ public:
     #ifdef __MQL5__
         CTrade trade;
         trade.SetExpertMagicNumber(ev.tracking_number);
-        res = trade.Buy(ev.volume);
+        if (ev.position_type == ePOSITION_TYPE_BUY)
+        {
+            res = trade.Buy(ev.volume);
+        }
+        else if (ev.position_type == ePOSITION_TYPE_SELL)
+        {
+            res = trade.Sell(ev.volume);
+        }
+        else
+        {
+            LOGE("ERROR: wrong position_type.");
+        }
+
         if(res)
         {
             LOGD("place buy order ok");
@@ -419,8 +431,22 @@ public:
         }
     #else // MQL4
         RefreshRates();
-        int ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
+        int ticket = 0;
+        if (ev.position_type == ePOSITION_TYPE_BUY)
+        {
+            ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
                         "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
+        }
+        else if (ev.position_type == ePOSITION_TYPE_SELL)
+        {
+            ticket = OrderSend(Symbol(), OP_SELL, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
+                        "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
+        }
+        else
+        {
+            LOGE("ERROR: wrong position_type.");
+        }
+
         res = (ticket > 0);
         if(res)
         {
