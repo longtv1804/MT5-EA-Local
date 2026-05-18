@@ -42,7 +42,10 @@ public:
             CommonDatacenter::s_copyTradeMode = eCPT_MODE_CLIENT;
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
-
+#ifdef __MQL5__
+#else
+        InitFirstSnapshot();
+#endif
         mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
         return mIsInitSuccessed;
     }
@@ -163,6 +166,24 @@ public:
                 return i;
         }
         return -1;
+    }
+
+    // bởi vì MT4 ko hỗ trợ OnChange trong position
+    // nên khi khởi tạo lần đầu cần lấy snapshot để tránh nhận nhầm tất cả các position
+    // hiện hữu là new position
+    void InitFirstSnapshot()
+    {
+        // lấy snapshot hiện tại
+        iPosition current_positions[];
+        TerminalAPI::DoGetAllPosition(current_positions);
+        int cur_total  = ArraySize(current_positions);
+
+        // lưu snapshot
+        ArrayResize(mPositions, cur_total);
+        for(int i = 0; i < cur_total; i++)
+        {
+            mPositions[i] = current_positions[i];
+        }
     }
 
     void CheckLocalPositionChanged()

@@ -712,6 +712,21 @@ private:
         }
     }
 
+    double NormalizeVolume(string symbol, double volume)
+    {
+        double minLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
+        double maxLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
+        double step   = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
+
+        volume = MathMax(minLot, MathMin(maxLot, volume));
+
+        volume = MathRound(volume / step) * step;
+
+        int digits = (int)MathRound(-MathLog10(step));
+
+        return NormalizeDouble(volume, digits);
+    }
+
     void OnServer_NewPositionAdded(int session, iPosition &newPos)
     {
         LOGD("session: " + (string)session + " " + ToString(newPos));
@@ -724,7 +739,7 @@ private:
         ev.eventId = EV_ADD_NEW_POSITION;
         ev.server_ticket = newPos.position_ticket;
         ev.position_type = newPos.position_type;
-        ev.volume = newPos.volume * mSession.GetWeight();
+        ev.volume = NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
         AddCopytradeEvent(ev);
     }
 
@@ -745,7 +760,7 @@ private:
         CopyTradeEvent ev = {0};
         ev.eventId = EV_CLOSED_POSITION;
         ev.server_ticket = closedPos.position_ticket;
-        ev.volume = closedPos.volume * mSession.GetWeight();
+        ev.volume = NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
         ev.position_type = closedPos.position_type;
         ev.target_ticket = target_ticket;
         AddCopytradeEvent(ev);
