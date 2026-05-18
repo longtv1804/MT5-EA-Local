@@ -32,21 +32,21 @@ int OnInit()
     if (i_TerminalMode == eCPT_MODE_UNKNOWN)
     {
         TerminalAPI::DoShowMessagePopup("You haven't set the CopyTrade mode!!");
-        LOGE("can not detect the brocker");
+        LOGE("You haven't set the CopyTrade mode!!");
+        TerminalAPI::DoCloseEA();
         return(INIT_FAILED);
     }
 
     TerminalAPI::DetectBroker();
     if (CommonDatacenter::sLOCAL_TERMINAL_TYPE  == eTERMINAL_TYPE_UNKNOWN)
     {
-        TerminalAPI::DoShowMessagePopup("can not detect the brocker!!!");
         LOGE("can not detect the brocker");
-        return(INIT_FAILED);
     }
 
     bool isOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
     if (!isOk)
     {
+        TerminalAPI::DoCloseEA();
         return INIT_FAILED;
     }
     EventSetTimer(1);

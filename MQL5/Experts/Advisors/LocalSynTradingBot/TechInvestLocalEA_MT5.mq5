@@ -46,8 +46,7 @@ int OnInit()
     TerminalAPI::DetectBroker();
     if (CommonDatacenter::sLOCAL_TERMINAL_TYPE  == eTERMINAL_TYPE_UNKNOWN)
     {
-        TerminalAPI::DoShowMessagePopup("can not detect the brocker!!!");
-        return(INIT_FAILED);
+        LOGE("can not detect the brocker");
     }
 
     bool isOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);

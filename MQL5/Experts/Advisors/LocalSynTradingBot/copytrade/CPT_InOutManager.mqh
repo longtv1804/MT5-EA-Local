@@ -53,6 +53,9 @@ public:
             if (isFileExisted == true)
             {
                 TerminalAPI::DoShowMessagePopup("SERVER is already existed, close EA!!!");
+                // trường hợp SERVER đã tồn tại: 
+                // gán lại mOutputFile để tránh remove file khi terminate
+                mOutputFile = "";
                 TerminalAPI::DoCloseEA();
                 return false;
             }
