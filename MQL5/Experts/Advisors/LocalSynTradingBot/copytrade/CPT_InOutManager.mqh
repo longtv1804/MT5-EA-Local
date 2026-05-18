@@ -253,7 +253,7 @@ public:
 public:
     void SeekToEndInputFile()
     {
-        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
+        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
             // Check file size before seeking
@@ -295,7 +295,7 @@ public:
         int dataLineCount = 0;
         ArrayResize(cmdList, dataLineCount);
 
-        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
+        int handle = FileOpen(mInputFile, FILE_READ|FILE_TXT|FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_ANSI|FILE_COMMON);
         if(handle != INVALID_HANDLE)
         {
             FileSeek(handle, mLastReadPosition, SEEK_SET);
@@ -315,7 +315,13 @@ public:
         }
         else
         {
-           LOGE("Can not open file (" + mInputFile + ")"); 
+            static int openFileErrLogCount = 0;
+            if (openFileErrLogCount % 30 == 0)
+            {
+                openFileErrLogCount = 0;
+                LOGE("Can not open file (" + mInputFile + ")");
+            }
+            openFileErrLogCount += 1;
         }
         return dataLineCount;
     }

@@ -443,7 +443,7 @@ public:
             isExisted = false;
             for (j = 0; j < curPosNum; j++)
             {
-                if (mTradingMap[i + 1] == posArr[j].position_ticket)
+                if (mTradingMap[i + 1] == 0 || mTradingMap[i + 1] == posArr[j].position_ticket)
                 {
                     isExisted = true;
                     break;
