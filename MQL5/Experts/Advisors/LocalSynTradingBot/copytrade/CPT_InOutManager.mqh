@@ -35,6 +35,7 @@ public:
         mInputFile = "";
         mOutputFile = "";
         mOutputFileId = 0;
+        mLastReadPosition = 0;
     }
     bool InitFilesPath()
     {

@@ -21,6 +21,7 @@ public:
     CPT_ServerTerminal() : CPT_LocalTerminal() 
     {
         mClientNumber = 0;
+        mCopyTradeSessionId = 0;
     }
 
     /*

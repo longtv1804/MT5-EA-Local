@@ -57,7 +57,12 @@ class CPT_CopyTradeSession
     *
     ***********************************************************************************/
 public:
-    CPT_CopyTradeSession() {}
+    CPT_CopyTradeSession()
+    {
+        mCptMode = 0;
+        mSessionId = 0;
+        mWeight = 0;
+    }
     CPT_CopyTradeSession(EnumCopyTradeMode mode, int id, double weight)
     {
         mCptMode = mode;

@@ -14,6 +14,7 @@ class CopyTradeController
 public:
     CopyTradeController()
     {
+        m_MyTerminal = NULL;
         mIsInitSuccessed = false;
     }
 

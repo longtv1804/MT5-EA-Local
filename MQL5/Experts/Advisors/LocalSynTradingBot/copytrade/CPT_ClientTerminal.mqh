@@ -16,7 +16,8 @@ private:
     enum EnumCopyTradeEvent
     {
         EV_ADD_NEW_POSITION = 1,
-        EV_CLOSED_POSITION = 2
+        EV_CLOSED_POSITION = 2,
+        EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE = 3,
     };
     CopyTradeEvent mCopyTradeEventQueue[];
 
@@ -40,6 +41,24 @@ private:
             {
                 LOGD("execute EV_CLOSED_POSITION");
                 res = TerminalAPI::DoCopyTrade_ClosePosition(ev);
+                break;
+            }
+            case EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE:
+            {
+                LOGD("execute EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE");
+                ulong target_ticket = mSession.GetClientTicket(ev.server_ticket);
+                if (target_ticket != 0)
+                {
+                    LOGD("switch EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE->EV_CLOSED_POSITION: target=" + (string)target_ticket);
+                    ev.eventId = EV_CLOSED_POSITION;
+                    ev.target_ticket = target_ticket;
+                    res = TerminalAPI::DoCopyTrade_ClosePosition(ev);
+                }
+                else
+                {
+                    LOGD("seem to be add new event failed, drop CLOSE event. sv-ticket:" + (string)ev.server_ticket);
+                    ev.status = EVS_DROP;
+                }
                 break;
             }
             default:
@@ -69,6 +88,11 @@ private:
             {
                 LOGD("CLOSED_POSITION done: client:" + (string)ev.target_ticket);
                 mSession.RemoveCopyTradePosition(ev.server_ticket, ev.target_ticket);
+                break;
+            }
+            case EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE:
+            {
+                LOGD("EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE done");
                 break;
             }
             default:
@@ -157,6 +181,7 @@ private:
         int size = ArraySize(mCopyTradeEventQueue);
         ArrayResize(mCopyTradeEventQueue, size + 1);
         mCopyTradeEventQueue[size] = ev;
+        mCopyTradeEventQueue[size].status = EVS_QUEUED;
         LOGD("event=" + ToString(ev));
         if (size == 0)
         {
@@ -180,6 +205,36 @@ private:
                 Execute();
             }
         }
+    }
+
+    bool HasPendingEvent(int event_id, ulong server_ticket)
+    {
+        int size = ArraySize(mCopyTradeEventQueue);
+        for (int i = 0; i < size; i++)
+        {
+            if (mCopyTradeEventQueue[i].eventId == event_id &&
+                mCopyTradeEventQueue[i].server_ticket == server_ticket)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool TryIgnoreEvent(int event_id, ulong server_ticket)
+    {
+        int size = ArraySize(mCopyTradeEventQueue);
+        for (int i = 1; i < size; i++)
+        {
+            if (mCopyTradeEventQueue[i].eventId == event_id &&
+                mCopyTradeEventQueue[i].server_ticket == server_ticket && 
+                mCopyTradeEventQueue[i].status == EVS_QUEUED)
+            {
+                mCopyTradeEventQueue[i].status = EVS_DROP;
+                return true;
+            }
+        }
+        return false;
     }
 
     /**********************************************************************************
@@ -754,7 +809,29 @@ private:
         ulong target_ticket = mSession.GetClientTicket(closedPos.position_ticket);
         if (target_ticket == 0)
         {
-            LOGD("can not find the target - server-ticket" + (string)closedPos.position_ticket);
+            // trong trường hợp event add new position chưa xong,
+            // nếu server close positon đó, thì sẽ ko thể tìm thấy target position
+            if (HasPendingEvent(EV_ADD_NEW_POSITION, closedPos.position_ticket) == true)
+            {
+                LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);
+                if (TryIgnoreEvent(EV_ADD_NEW_POSITION, closedPos.position_ticket) == true)
+                {
+                    LOGD("ignored the ADD event: sv-ticket:" + (string)closedPos.position_ticket);
+                }
+                else
+                {
+                    CopyTradeEvent ev = {0};
+                    ev.eventId = EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE;
+                    ev.server_ticket = closedPos.position_ticket;
+                    ev.volume = NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
+                    ev.position_type = closedPos.position_type;
+                    AddCopytradeEvent(ev);
+                }
+            }
+            else
+            {
+                LOGD("can not find the target, server-ticket:" + (string)closedPos.position_ticket);
+            }
             return;
         }
         CopyTradeEvent ev = {0};
