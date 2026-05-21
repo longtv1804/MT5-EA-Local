@@ -43,10 +43,9 @@ public:
             CommonDatacenter::s_copyTradeMode = eCPT_MODE_CLIENT;
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
-#ifdef __MQL5__
-#else
+
         InitFirstSnapshot();
-#endif
+        
         mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
         return mIsInitSuccessed;
     }
