@@ -148,13 +148,13 @@ public:
             }
         }
     }
-
+#endif
 /**********************************************************************************
 *
 *  MQL4: function checking Position change
+*      -> sử dụng cho cả MQL5
 *
 ***********************************************************************************/
- #else
  private:
     iPosition mPositions[];
 
@@ -187,6 +187,7 @@ public:
         }
     }
 
+public:
     void CheckLocalPositionChanged()
     {
         // lấy snapshot hiện tại
@@ -250,5 +251,4 @@ public:
             mPositions[i] = current_positions[i];
         }
     }
-#endif
 };

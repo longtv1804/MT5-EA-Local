@@ -26,11 +26,9 @@ CopyTradeController g_CopyTradeController;
 *   EA main functions
 *
 ***********************************************************************/
-void OnTradeTransaction(const MqlTradeTransaction& trans,
-                        const MqlTradeRequest& request,
-                        const MqlTradeResult& result)
+void OnTrade()
 {
-    g_CopyTradeController.OnLocal_OnTradeTransaction(trans, request, result);
+   g_CopyTradeController.CheckLocalPositionChanged();
 }
 
 int OnInit()

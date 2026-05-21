@@ -317,6 +317,7 @@ public:
                 if (mSession.GetWeight() == previousSession.GetWeight())
                 {
                     mSession.SetSessionId(previousSession.GetSessionId());
+                    previousSession.CopyTradingMap(mSession);
                     mSession.UpdateLatestPosition(posArr);
                 }
                 else
