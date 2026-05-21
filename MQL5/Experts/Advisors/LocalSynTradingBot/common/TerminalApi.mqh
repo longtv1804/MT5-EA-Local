@@ -469,11 +469,6 @@ public:
             return false;
         }
 
-        if(ev.volume <= 0)
-        {
-            LOGD("invalid volume");
-            return false;
-        }
     #ifdef __MQL5__
         if(!PositionSelectByTicket(ticket))
         {
@@ -482,20 +477,15 @@ public:
         }
 
         string symbol = PositionGetString(POSITION_SYMBOL);
-        double pos_volume = PositionGetDouble(POSITION_VOLUME);
-        double close_volume = MathMin(ev.volume, pos_volume);
-
+        
         CTrade trade;
-        bool ok = trade.PositionClosePartial(ticket, close_volume);
-
+        bool ok = trade.PositionClose(ticket);
         if(!ok)
         {
-            LOGD(StringFormat("PositionClosePartial failed retcode=%d desc=%s", 
+            LOGD(StringFormat("PositionClose ticket:" + (string)ticket + "  failed retcode=%d desc=%s", 
                                 trade.ResultRetcode(), trade.ResultRetcodeDescription()));
             return false;
         }
-        LOGD(StringFormat("Close success ticket=%I64u close_volume=%f", ticket, close_volume));
-        return true;
     #else // MQL4
         if(!OrderSelect((int)ticket, SELECT_BY_TICKET))
         {
@@ -512,22 +502,18 @@ public:
 
         string symbol = OrderSymbol();
         double lots = OrderLots();
-        double close_volume = MathMin(ev.volume, lots);
-
         RefreshRates();
+
         double price = (type == OP_BUY) ? MarketInfo(symbol, MODE_BID) : MarketInfo(symbol, MODE_ASK);
-
-        LOGD(StringFormat("Closing order ticket=%I64u symbol=%s volume=%f", ticket, symbol, close_volume));
-
-        bool ok = OrderClose((int)ticket, close_volume, price, 10, clrNONE);
+        LOGD(StringFormat("Closing order ticket=%I64u symbol=%s volume=%f", ticket, symbol, lots));
+        bool ok = OrderClose((int)ticket, lots, price, 10, clrNONE);
         if(!ok)
         {
-            LOGD("OrderClose failed err=" + (string)GetLastError());
-
+            LOGD("OrderClose failed ticket:" + (string)ticket + " err=" + (string)GetLastError());
             return false;
         }
-        LOGD("Close success");
-        return true;
     #endif
+        LOGD(StringFormat("Close success ticket=%I64u", ticket));
+        return true;
     }
 };
