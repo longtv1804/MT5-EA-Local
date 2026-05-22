@@ -1,5 +1,6 @@
 #include "../common/Utils.mqh"
 #include "../common/Types.mqh"
+#include "../common/Constants.mqh"
 #include "../common/CommonDatacenter.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_ServerTerminal.mqh"
@@ -29,6 +30,7 @@ public:
 
     bool Init(int terminal_mode, double weight)
     {
+        LOGD("EA: " + CPT_EA_VER);
         // init seed number for MathRand()
         MathSrand(GetTickCount());
 

@@ -383,8 +383,8 @@ public:
         // các ticket khác phải là duy nhất
         for (int i = 0; i <  size; i += 2)
         {
-            if (mTradingMap[i] != 0 && mTradingMap[i] == serverPosId 
-                || mTradingMap[i + 1] != 0 && mTradingMap[i + 1] == myPosId)
+            if ((mTradingMap[i] != 0 && mTradingMap[i] == serverPosId)
+                || (mTradingMap[i + 1] != 0 && mTradingMap[i + 1] == myPosId))
             {
                 LOGE("Dupplicated serverPosId:" + (string)serverPosId + " or myPosId:" + (string)myPosId);
                 return;
