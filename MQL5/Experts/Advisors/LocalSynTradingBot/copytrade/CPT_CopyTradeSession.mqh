@@ -139,7 +139,7 @@ public:
         return posNum;
     }
 
-    void CopyTradingMap(CPT_CopyTradeSession& target)
+    void CopyTradingMap(CPT_CopyTradeSession& target) const
     {
         int size = ArraySize(mTradingMap);
         for (int i = 0; i < size; i += 2)
@@ -148,7 +148,7 @@ public:
         }
     }
 
-    ulong GetClientTicket(ulong server_ticket)
+    ulong GetClientTicket(ulong server_ticket) const
     {
         if (server_ticket == 0)
         {
@@ -167,7 +167,8 @@ public:
         }
         return res;
     }
-    ulong GetServerTicket(ulong client_ticket)
+
+    ulong GetServerTicket(ulong client_ticket) const
     {
         if (client_ticket == 0)
         {
@@ -187,7 +188,7 @@ public:
         return res;
     }
 
-    bool HasClientTicket(ulong client_ticket)
+    bool HasClientTicket(ulong client_ticket) const
     {
         if (client_ticket == 0) return false;
         int size = ArraySize(mTradingMap);
@@ -201,7 +202,7 @@ public:
         return false;
     }
 
-    bool HasServerTicket(ulong server_ticket)
+    bool HasServerTicket(const ulong server_ticket) const
     {
         if (server_ticket == 0) return false;
         int size = ArraySize(mTradingMap);
@@ -215,7 +216,7 @@ public:
         return false;
     }
 
-    void GetTradingData(ulong &arr[])
+    void GetTradingData(ulong &arr[]) const
     {
         int size = ArraySize(mTradingMap);
         ArrayResize(arr, size);
@@ -377,6 +378,18 @@ public:
     void AddCopyTradPosition(ulong serverPosId, ulong myPosId)
     {
         int size = ArraySize(mTradingMap);
+        // kiểm tra dữ liệu đang có và logging out nếu có lỗi logic
+        // chỉ có giá trị 0 được lặp lại trong mTradingMap
+        // các ticket khác phải là duy nhất
+        for (int i = 0; i <  size; i += 2)
+        {
+            if (mTradingMap[i] != 0 && mTradingMap[i] == serverPosId 
+                || mTradingMap[i + 1] != 0 && mTradingMap[i + 1] == myPosId)
+            {
+                LOGE("Dupplicated serverPosId:" + (string)serverPosId + " or myPosId:" + (string)myPosId);
+                return;
+            }
+        }
         ArrayResize(mTradingMap, size + 2);
         mTradingMap[size] = serverPosId;
         mTradingMap[size + 1] = myPosId;

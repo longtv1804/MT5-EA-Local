@@ -359,7 +359,7 @@ public:
             }
             if (isOldTradeIsExisted)
             {
-                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: client đang có sẵn các Position của position trước đó!! hãy kiểm tra");
+                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: Positions existed!!! please check!!!");
                 res = false;
             }
         }
@@ -368,10 +368,10 @@ public:
         {
             if (currentPosNum > 0)
             {
-                TerminalAPI::DoShowMessagePopup("WARNING init CLIENT: client đang có sẵn các Position!");
+                TerminalAPI::DoShowMessagePopup("WARNING init CLIENT: Positions existed!!!");
             }
         }
-        if (res)
+        if (res == true)
         {
             SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
         }
@@ -552,7 +552,7 @@ private:
         {
             if (now_client_posNum > 0)
             {
-                TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: client-server missmatch session id và client tồn tại position chưa close!! hãy kiểm tra lại!!!");
+                TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: missmatch session id and positions existed has not closed!! please check!!!");
                 TerminalAPI::DoCloseEA();
                 return;
             }
@@ -832,6 +832,8 @@ private:
             else
             {
                 LOGD("can not find the target, server-ticket:" + (string)closedPos.position_ticket);
+                // thử remove data trong session
+                mSession.RemoveCopyTradePosition(closedPos.position_ticket, 0);
             }
             return;
         }

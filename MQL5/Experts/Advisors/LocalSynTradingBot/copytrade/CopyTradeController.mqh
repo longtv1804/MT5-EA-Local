@@ -183,6 +183,7 @@ public:
         for(int i = 0; i < cur_total; i++)
         {
             mPositions[i] = current_positions[i];
+            LOGD(ToString(mPositions[i]));
         }
     }
 
