@@ -147,7 +147,7 @@ public:
         int size = ArraySize(mTradingMap);
         for (int i = 0; i < size; i += 2)
         {
-            target.AddCopyTradPosition(mTradingMap[i], mTradingMap[i+1]);
+            target.AddCopyTradePosition(mTradingMap[i], mTradingMap[i+1]);
         }
     }
 
@@ -274,7 +274,7 @@ public:
             }
             if (isExisted == false)
             {
-                AddCopyTradPosition(0, latestPositions[j].position_ticket);
+                AddCopyTradePosition(0, latestPositions[j].position_ticket);
                 mapSize = ArraySize(mTradingMap);
             }
         }
@@ -378,7 +378,7 @@ public:
     *  add/delete function
     *
     ***********************************************************************************/
-    void AddCopyTradPosition(ulong serverPosId, ulong myPosId)
+    void AddCopyTradePosition(ulong serverPosId, ulong myPosId)
     {
         int size = ArraySize(mTradingMap);
         // kiểm tra dữ liệu đang có và logging out nếu có lỗi logic

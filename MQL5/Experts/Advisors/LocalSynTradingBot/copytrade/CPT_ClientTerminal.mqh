@@ -81,7 +81,7 @@ private:
             case EV_ADD_NEW_POSITION:
             {
                 LOGD("ADD_NEW_POSITION done: server:" + (string)ev.server_ticket + " client:" + (string)ev.target_ticket);
-                mSession.AddCopyTradPosition(ev.server_ticket, ev.target_ticket);
+                mSession.AddCopyTradePosition(ev.server_ticket, ev.target_ticket);
                 break;
             }
             case EV_CLOSED_POSITION:
@@ -158,7 +158,7 @@ private:
                 mCopyTradeEventQueue[0].status = EVS_DROP;
                 if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
                 {
-                    mSession.AddCopyTradPosition(mCopyTradeEventQueue[0].server_ticket, 0);
+                    mSession.AddCopyTradePosition(mCopyTradeEventQueue[0].server_ticket, 0);
                 }
             }
             Execute();
@@ -354,7 +354,7 @@ public:
         // nếu ko phải postion cho copy trade, thì add nó ở dạng [0, pos-id]
         if (isCopyTradePositionAdded == false)
         {
-            mSession.AddCopyTradPosition(0, newPos.position_ticket);
+            mSession.AddCopyTradePosition(0, newPos.position_ticket);
         }
     }
 
@@ -566,7 +566,7 @@ private:
         {
             if (mSession.HasClientTicket(now_client_positions[i].position_ticket) == false)
             {
-                mSession.AddCopyTradPosition(0, now_client_positions[i].position_ticket);
+                mSession.AddCopyTradePosition(0, now_client_positions[i].position_ticket);
             }
         }
 
@@ -575,7 +575,7 @@ private:
         {
             if (mSession.HasServerTicket(server_positions[i].position_ticket) == false)
             {
-                mSession.AddCopyTradPosition(server_positions[i].position_ticket, 0);
+                mSession.AddCopyTradePosition(server_positions[i].position_ticket, 0);
             }
         }
 

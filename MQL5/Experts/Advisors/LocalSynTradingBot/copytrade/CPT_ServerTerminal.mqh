@@ -112,7 +112,7 @@ public:
         CPT_CopyTradeSession session(eCPT_MODE_SERVER, mCopyTradeSessionId, 0);
         for(int i = 0; i < size; i++)
         {
-            session.AddCopyTradPosition(0, posArr[i].position_ticket);
+            session.AddCopyTradePosition(0, posArr[i].position_ticket);
         }
         session.SaveSession();
     }
