@@ -294,35 +294,15 @@ public:
             mSession.UpdateLatestPosition(posArr);
         }
         // server  -> client: 
-        //     1, nếu dữ liệu cũ còn position đang chạy ->  close EA
-        //     2, case khác: update session theo trạng thái hiện tại (ko lấy dữ liệu cũ)
+        //      update session theo trạng thái hiện tại (ko lấy dữ liệu cũ)
+        //      nếu còn position đang chạy thì warning cho user
         else if (previousSession.GetMode() == eCPT_MODE_SERVER)
         {
-            ulong oldMap[];
-            previousSession.GetTradingData(oldMap);
-            int tradingDataSize = ArraySize(oldMap);
-            bool isOldTradeIsExisted = false;
-            for (i = 0; i < tradingDataSize; i += 2)
+            if (currentPosNum > 0)
             {
-                for  (j = 0; j < currentPosNum; j ++)
-                {
-                    if (oldMap[i] != 0 && oldMap[i + 1] != 0 && oldMap[i + 1] == posArr[j].position_ticket)
-                    {
-                        isOldTradeIsExisted = true;
-                        break;
-                    }
-                }
-                if (isOldTradeIsExisted) break;
+                TerminalAPI::DoShowMessagePopup("SERVER -> CLIENT: some Positions are existed!!! be carefull!!!");
             }
-            if (isOldTradeIsExisted)
-            {
-                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: CPT Positions existed!!! please check!!!");
-                res = false;
-            }
-            else
-            {
-                mSession.UpdateLatestPosition(posArr);
-            }
+            mSession.UpdateLatestPosition(posArr);
         }
         else
         {
