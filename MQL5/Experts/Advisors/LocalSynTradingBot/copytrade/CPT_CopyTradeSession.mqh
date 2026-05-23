@@ -230,6 +230,11 @@ public:
         }
     }
 
+    /**********************************************************************************
+    *
+    *  functions for update session by latest data from client/server
+    *
+    ***********************************************************************************/
     void UpdateLatestPosition(iPosition &latestPositions[])
     {
         int i = 0, j = 0;
@@ -243,7 +248,7 @@ public:
             isExisted = false;
             for (j = 0; j < posNum; j++)
             {
-                if (mTradingMap[i + 1] == latestPositions[j].position_ticket)
+                if (mTradingMap[i + 1] == 0 || mTradingMap[i + 1] == latestPositions[j].position_ticket)
                 {
                     isExisted = true;
                     break;
@@ -282,7 +287,6 @@ public:
             }
         }
     }
-
 
     /**********************************************************************************
     *
@@ -480,5 +484,20 @@ public:
                 closedPositions[size] = mTradingMap[i];
             }
         }
+    }
+
+    void Logging()
+    {
+        int mapSize = ArraySize(mTradingMap);
+        string textData = "[";
+        for (int i = 0; i < mapSize; i += 1)
+        {
+            textData += (string)mTradingMap[i];
+            if (i < mapSize - 1) {
+                textData += ",";
+            }
+        }
+        textData += "]";
+        LOGD("SESSION:" + (string)mSessionId + " " + ToString(mCptMode) + " weight=" + (string)mWeight + " trademap=" + textData);
     }
 };

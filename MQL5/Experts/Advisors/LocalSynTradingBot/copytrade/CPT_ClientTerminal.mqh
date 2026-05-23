@@ -1,4 +1,5 @@
 #include "../common/Types.mqh"
+#include "../common/Utils.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_CopyTradeSession.mqh"
 
@@ -486,91 +487,31 @@ private:
     {
         int server_posNum = ArraySize(server_positions);
         int now_client_posNum = ArraySize(now_client_positions);
-        int pre_client_posNum = mSession.GetClientPositionNumer();
         LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + 
                                     " my-session:" +(string)mSession.GetSessionId() + 
                                     " server-posnum:" + (string)server_posNum +
-                                    " client-posnum:" + (string)now_client_posNum +
-                                    " pre-client-posnum:" + (string)pre_client_posNum);
-
-        //*********************************************************************************
-        // A, xác định session-id
-        //     1, client-session = 0: lấy theo server-session
-        //     2, client-session == server-session: giữ nguyên ssid
-        //     3, client-session != server-session:
-        //          + nếu client ko có position nào: lấy server-session
-        //          + nếu client có position -> noti ERRIRO, close EA
-        //*********************************************************************************
-        // 1, client-session = 0:
-        if (mSession.GetSessionId() == 0)
-        {
-            mSession.SetSessionId(server_sessionId);
-        }
-        // 2, client-session == server-sesion:
-        else if (server_sessionId == mSession.GetSessionId())
-        {
-            // keep current ssid
-        }
-        // 3, client-session != server-sesion:
-        else //if (server_sessionId != mSession.GetSessionId())
-        {
-            if (now_client_posNum > 0)
-            {
-                TerminalAPI::DoShowMessagePopup("ERROR in CLIENT connecting: missmatch session id and positions existed has not closed!! please check!!!");
-                TerminalAPI::DoCloseEA();
-                return;
-            }
-            else
-            {
-                mSession.SetSessionId(server_sessionId);
-            }
-        }
-
-        //*********************************************************************************
-        // B, update thông tin session theo thực trạng
-        //      1, lấy now-position update vào mSession: [0, posid]
-        //      2, lấy server-position update vào mSession: [sever-posid, 0]
-        //*********************************************************************************
-        ulong tradingMap[];
-        mSession.GetTradingData(tradingMap);
-        int tradingMapSize = ArraySize(tradingMap);
-
-        // 1, remove những pair ko còn tồn tại
+                                    " client-posnum:" + (string)now_client_posNum);
         int i = 0, j = 0;
         bool isExisted = false;
-        for (i = 0; i < tradingMapSize; i += 2)
+        //*********************************************************************************
+        // A, xác định session-id
+        //      + Luôn luôn lấy session-id theo server
+        //      + nếu session khác server-id, 
+        //*********************************************************************************
+        if (mSession.GetSessionId() != 0 && server_sessionId != mSession.GetSessionId())
         {
-            isExisted = false;
-            // check tồn tại trong server_positions ko?
-            if (tradingMap[i] != 0)
-            {
-                for (j = 0; j < server_posNum; j++) {
-                    if (server_positions[j].position_ticket == tradingMap[i]) { isExisted = true; break; }
-                }
-            }
-            // check tồn tại trong now_client_positions ko?
-            if (isExisted && tradingMap[i + 1] != 0)
-            {
-                for (j = 0; j < now_client_posNum; j++) {
-                    if (now_client_positions[j].position_ticket == tradingMap[i + 1]) { isExisted = true; break; }
-                }
-            }
-            if (!isExisted)
-            {
-                mSession.RemoveCopyTradePosition(tradingMap[i], tradingMap[i + 1]);
-            }
-        }
+            LOGD("Difference session-id, server:" + (string)server_sessionId + " client:" + (string)mSession.GetSessionId());
+        } 
+        mSession.SetSessionId(server_sessionId);
 
-        // 2, lấy now-position update vào mSession: [0, posid]
-        for (i = 0; i < now_client_posNum; i++)
-        {
-            if (mSession.HasClientTicket(now_client_positions[i].position_ticket) == false)
-            {
-                mSession.AddCopyTradePosition(0, now_client_positions[i].position_ticket);
-            }
-        }
-
-        // 3, lấy server-position update vào mSession: [sever-posid, 0]
+        //*********************************************************************************
+        // B, update thông tin session theo thực trạng của server
+        //      1, server new position: add [ticket, 0]
+        //      2, server closed positon: check nếu tồn tại trong sesison
+        //              2.1, position chưa close -> thực hiện close position
+        //              2.2, position đã close   -> remove khỏi session
+        //*********************************************************************************
+        // 1, server new position: add [ticket, 0]
         for (i = 0; i < server_posNum; i++)
         {
             if (mSession.HasServerTicket(server_positions[i].position_ticket) == false)
@@ -578,7 +519,71 @@ private:
                 mSession.AddCopyTradePosition(server_positions[i].position_ticket, 0);
             }
         }
+        
+        // 2, check server closed positon:
+        //      2.1 tìm tất cả các ticket mà đã bị close
+        //      2.2 thực hiện close bên client nếu ticket-positon đối ứng vẫn tồn tại
+        //          remove trong mSession nếu ticket đối ứng ko tồn tại
+        ulong tradingMap[];
+        mSession.GetTradingData(tradingMap);
+        int tradingMapSize = ArraySize(tradingMap);
+        // 2.1
+        ulong server_closedTickets[];
+        ArrayResize(server_closedTickets, tradingMapSize/2);
+        int closedTicketsCount = 0;
+        for (i = 0; i < tradingMapSize; i += 2)
+        {
+            isExisted = false;
+            for (int j = 0; j < server_posNum; j++)
+            {
+                if (tradingMap[i] == 0 || tradingMap[i] == server_positions[j].position_ticket)
+                {
+                    isExisted = true; break;
+                }
+            }
+            if (isExisted == false)
+            {
+                ArrayResize(server_closedTickets, closedTicketsCount + 1);
+                server_closedTickets[closedTicketsCount] = tradingMap[i];
+                closedTicketsCount += 1;
+            }
+        }
+        // 2.2
+        LOGD("server has " + (string)closedTicketsCount + " positions closed.");
+        for (i = 0; i < closedTicketsCount; i++)
+        {
+            ulong server_ticket = server_closedTickets[i];
+            ulong client_ticket = mSession.GetClientTicket(server_ticket);
+            
+            isExisted = false;
+            for (j = 0; j < now_client_posNum; j++)
+            {
+                if (client_ticket == now_client_positions[j].position_ticket)
+                {
+                    isExisted = true; break;
+                }
+            }
+            if (isExisted == true)
+            {
+                LOGD("Process closed position [" + (string)server_ticket + ", " + (string)client_ticket + "]");
+                CopyTradeEvent ev = {0};
+                ev.eventId = EV_CLOSED_POSITION;
+                ev.server_ticket = server_ticket;
+                ev.volume = now_client_positions[j].volume;
+                ev.position_type = now_client_positions[j].position_type;
+                ev.target_ticket = client_ticket;
+                AddCopytradeEvent(ev);
+            }
+            else
+            {
+                mSession.RemoveCopyTradePosition(server_closedTickets[i], client_ticket);
+            }
+        }
 
+        //*********************************************************************************
+        // C, update state và logging
+        //*********************************************************************************
+        mSession.Logging();
         SetConnectionState(eSERVER_CONN_STATE_CONNECTED);
     }
 
