@@ -145,6 +145,7 @@ public:
     void CopyTradingMap(CPT_CopyTradeSession& target) const
     {
         int size = ArraySize(mTradingMap);
+        LOGD("copy trading map, size=" + (string)size);
         for (int i = 0; i < size; i += 2)
         {
             target.AddCopyTradePosition(mTradingMap[i], mTradingMap[i+1]);
@@ -234,6 +235,7 @@ public:
         int i = 0, j = 0;
         int mapSize = ArraySize(mTradingMap);
         int posNum = ArraySize(latestPositions);
+        LOGD("update latest, size=" + (string)posNum);
         bool isExisted = false;
         // xóa bỏ các position đã bị close
         for (i = 0; i < mapSize; i+=2)
@@ -250,6 +252,7 @@ public:
             if (isExisted == false)
             {
                 // position đã bị close -> remove it in trading map
+                LOGD("CPT remove: {" + (string)mTradingMap[i] + ", " + (string)mTradingMap[i + 1] +"}");
                 for (j = i; j < mapSize - 2; j += 2)
                 {
                     mTradingMap[j] = mTradingMap[j + 2];
