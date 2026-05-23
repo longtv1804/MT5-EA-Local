@@ -48,63 +48,51 @@ public:
         int currentPosNum = ArraySize(posArr);
         int closedPosNum  = ArraySize(closedPosition);
         int newPosNum     = ArraySize(newPosition);
-        LOGD("previous mode=" + ToString(previousSession.GetMode()) + 
-                                " previous-ss:" + (string)previousSession.GetSessionId() + 
-                                " currentPosNum=" + (string)currentPosNum + 
-                                " closedPosNum=" + (string)closedPosNum + 
-                                " newPosNum=" + (string)newPosNum);
+        LOGD("previous mode=" + ToString(previousSession.GetMode()) + " previous-ss:" + (string)previousSession.GetSessionId());
+        LOGD("currentPosNum=" + (string)currentPosNum +" closedPosNum=" + (string)closedPosNum + " newPosNum=" + (string)newPosNum);
 
         bool res = true;
-        // kiểm tra mode: nếu trc đó là client, giờ là server
-        if (previousSession.GetMode() == eCPT_MODE_CLIENT)
+        // unknown -> server:
+        // client  -> server:
+        if (previousSession.GetMode() == eCPT_MODE_UNKNOWN
+            || previousSession.GetMode() == eCPT_MODE_CLIENT)
         {
-            // không có position nào đang chạy
+            // còn position đang chạy, cần cảnh báo user
             if (currentPosNum >  0)
             {
-                TerminalAPI::DoShowMessagePopup("WARNING: CLIENT -> SERVER: có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
+                TerminalAPI::DoShowMessagePopup("WARNING: -> SERVER: some positions are still existed, please take care of them!!!");
             }
             mCopyTradeSessionId = MathRand();
         }
-        // 2: nếu trc đó là server, giờ vẫn là server
+        // server  -> server:
         else if (previousSession.GetMode() == eCPT_MODE_SERVER)
         {
-            // ko có position nào: new session
+            // ko có position nào tồn tại
             if (currentPosNum == 0)
             {
                 mCopyTradeSessionId = MathRand();
             }
-            // possion list trùng hoàn toàn với session cũ: lấy session cũ
-            else if (closedPosNum == 0 && newPosNum == 0)
-            {
-                mCopyTradeSessionId = previousSession.GetSessionId();
-            }
-            // possion list trùng một phần (có cái bị close, có new pos): lấy session cũ + warning
-            else if (closedPosNum < previousSession.GetClientPositionNumer())
-            {
-                mCopyTradeSessionId = previousSession.GetSessionId();
-            }
-            // possition cũ đã bị close hết
-            else if (closedPosNum == previousSession.GetClientPositionNumer())
-            {
-                mCopyTradeSessionId = MathRand();
-            }
-            // case khác: close EA 
             else
             {
-                TerminalAPI::DoShowMessagePopup("ERROR in INIT SERVER!!!");
-                res = false;
+                // nếu dữ liệu trading cũ còn position đang tồn tại
+                if (closedPosNum < previousSession.GetClientPositionNumer())
+                {
+                    mCopyTradeSessionId = previousSession.GetSessionId();
+                }
+                // ko còn 
+                else
+                {
+                    mCopyTradeSessionId = MathRand();
+                }
             }
         }
-        // ko detect dc mode
         else
         {
-            if (currentPosNum > 0)
-            {
-                TerminalAPI::DoShowMessagePopup("WARNING: SERVER: có một vài position vẫn tồn tại, hãy kiểm tra lại!!!");
-            }
-            mCopyTradeSessionId = MathRand();
+            TerminalAPI::DoShowMessagePopup("ERROR in INIT SERVER: ko xac dinh previous MODE !!!");
+            res = false;
         }
-        LOGD("SERVER session=" + (string)mCopyTradeSessionId);
+
+        LOGD("SERVER: previous(" + (string) previousSession.GetSessionId() + ") -> session=(" + (string)mCopyTradeSessionId + ")");
 
         if (res)
         {
