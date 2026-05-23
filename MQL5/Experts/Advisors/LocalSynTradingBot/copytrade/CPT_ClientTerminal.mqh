@@ -120,7 +120,7 @@ private:
             }
             else
             {
-                if (mCopyTradeEventQueue[0].status == EVS_DROP){
+                if (mCopyTradeEventQueue[0].status == EVS_DROP) {
                     // do nothing
                 } else {
                     mCopyTradeEventQueue[0].status = EVS_FAILED;
@@ -156,6 +156,10 @@ private:
             else
             {
                 mCopyTradeEventQueue[0].status = EVS_DROP;
+                if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
+                {
+                    mSession.AddCopyTradPosition(mCopyTradeEventQueue[0].server_ticket, 0);
+                }
             }
             Execute();
         }
@@ -424,21 +428,47 @@ public:
     {
         int queue_size = ArraySize(mCopyTradeEventQueue);
 
-        // sau khi position closed, cần check lại và update event thành DONE
         bool isCopyTradePositionClosed = false;
-        if (queue_size > 0 && mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
+        if (queue_size > 0)
         {
-            if (mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
+            // sau khi position closed, cần check lại và update event thành DONE
+            if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION &&
+                mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
             {
                 isCopyTradePositionClosed = true;
                 mCopyTradeEventQueue[0].status = EVS_DONE;
+            }
+            // set EVS_DROP cho queue-event khi ticket là target-ticket và event chưa dc process
+            else
+            {
+                for (int i = 1; i < queue_size; i++)
+                {
+                    if (mCopyTradeEventQueue[i].eventId == EV_CLOSED_POSITION &&
+                        mCopyTradeEventQueue[i].target_ticket == closedPos.position_ticket)
+                    {
+                        LOGD("DROP queue-event because target-ticket(" + (string)closedPos.position_ticket
+                                + ") is closed before the event is processed ");
+                        mCopyTradeEventQueue[i].status = EVS_DROP;
+                        break;
+                    }
+                }
             }
         }
 
         // nếu ko phải postion cho copy trade, thì thử remove nó
         if (isCopyTradePositionClosed == false)
         {
-            mSession.RemoveCopyTradePosition(0, closedPos.position_ticket);
+            ulong server_ticket = mSession.GetServerTicket(closedPos.position_ticket);
+            // trường hợp user đóng mất ticket nằm trong TradingMap
+            if (server_ticket != 0)
+            {
+                mSession.RemoveCopyTradePosition(server_ticket, closedPos.position_ticket);
+            }
+            // trường hợp ticket không nằm trong TradingMap
+            else
+            {
+                mSession.RemoveCopyTradePosition(0, closedPos.position_ticket);
+            }
         }
     }
 

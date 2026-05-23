@@ -182,6 +182,7 @@ public:
 
         // lưu snapshot
         ArrayResize(mPositions, cur_total);
+        LOGD("save first snapshot: " + (string)cur_total);
         for(int i = 0; i < cur_total; i++)
         {
             mPositions[i] = current_positions[i];
