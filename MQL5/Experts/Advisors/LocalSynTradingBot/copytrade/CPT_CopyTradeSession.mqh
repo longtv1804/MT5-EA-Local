@@ -77,8 +77,11 @@ public:
 
     void SetSessionId(int id)
     {
-        LOGD("Session changed " + (string)mSessionId + " -> " + (string)id);
-        mSessionId = id;
+        if (mSessionId != id)
+        {
+            LOGD("Session changed " + (string)mSessionId + " -> " + (string)id);
+            mSessionId = id;
+        }
     }
 
     int GetSessionId() const
@@ -320,7 +323,7 @@ public:
                 // string -> ulong
                 mTradingMap[i] = (ulong)StringToInteger(parts[i]);
             }
-            LOGD("load trading data from [" + filePath + "], session=" + (string)mSessionId + " arr=" + arrStr);
+            LOGD("load trading data from [" + filePath + "], session=" + (string)mSessionId + " arr=[" + arrStr + "]");
         }
         else
         {

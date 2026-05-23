@@ -255,14 +255,12 @@ public:
         SetConnectionState(eSERVER_CONN_STATE_UNKNOWN);
     }
 
-    /*
-    *   init client:
-    *   + thực hiện load session info trước đó
-    *   + thực hiện kiểm tra:
-    *       1, client -> client: chỉ init khi ko có pos nào đang chạy hoặc các pos đều thuộc session cũ.
-    *       2, server -> client: chỉ init khi ko có pos nào.
-    *       3, unkown -> client: chỉ init khi ko có pos nào.
-    */
+    // client init:
+    //     + unknown -> client: lấy theo trading map cũ rồi update theo trạng thái hiện tại
+    //     + client  -> client: lấy theo trading map cũ rồi update theo trạng thái hiện tại
+    //     + server  -> client:
+    //         1, nếu dữ liệu cũ còn position đang chạy ->  close EA
+    //         2, case khác: update session theo trạng thái hiện tại (ko lấy dữ liệu cũ)
     bool Init(CPT_InOutManager* inOutController) override
     {
         CPT_LocalTerminal::Init(inOutController);
@@ -280,70 +278,24 @@ public:
         int currentPosNum = ArraySize(posArr);
         int closedPosNum  = ArraySize(closedPosition);
         int newPosNum     = ArraySize(newPosition);
-        LOGD("previous mode=" + ToString(previousSession.GetMode()) + 
-                                " previousWeight=" + (string)previousSession.GetWeight() +
-                                " currentWeight=" + (string)mSession.GetWeight() +
-                                " currentPosNum=" + (string)currentPosNum + 
-                                " closedPosNum=" + (string)closedPosNum + 
-                                " newPosNum=" + (string)newPosNum);
+        LOGD("previous mode=" + ToString(previousSession.GetMode()) + " preWeight=" + (string)previousSession.GetWeight() + "nowWeight=" + (string)mSession.GetWeight());
+        LOGD("currentPosNum=" + (string)currentPosNum + " closedPosNum=" + (string)closedPosNum + " newPosNum=" + (string)newPosNum);
+
         bool res = true;
-        int i =0, j = 0;
-        //client  -> client:
-        //	1, ko có position nào: chờ connecting
-        //	2, possion list trùng hoàn toàn với session cũ: lấy session cũ
-        //	3, possion list trùng một phần (có cái bị close, có new pos): lấy session cũ
-        //	4, possion cũ bị close hết
-        //	5, case khác: close EA 
-        if (previousSession.GetMode() == eCPT_MODE_CLIENT)
+        int i = 0, j = 0;
+        // unknown -> client:
+        // client  -> client:
+        //          lấy theo trading map cũ rồi update theo trạng thái hiện tại
+        if (previousSession.GetMode() == eCPT_MODE_UNKNOWN
+            || previousSession.GetMode() == eCPT_MODE_CLIENT)
         {
-            //	1, ko có position nào: chờ connecting
-            if (currentPosNum == 0)
-            {
-                // do nothing
-            }
-            //	2, possion list trùng hoàn toàn với session cũ: lấy session cũ
-            else if (closedPosNum == 0 && newPosNum == 0)
-            {
-                if (mSession.GetWeight() == previousSession.GetWeight())
-                {
-                    mSession.SetSessionId(previousSession.GetSessionId());
-                    previousSession.CopyTradingMap(mSession);
-                }
-                else
-                {
-                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: Same previous session but weith is different");
-                    res = false;
-                }
-            }
-            // 3, possion list trùng một phần (có cái bị close, có new pos): lấy session cũ
-            else if (closedPosNum < previousSession.GetClientPositionNumer())
-            {
-                if (mSession.GetWeight() == previousSession.GetWeight())
-                {
-                    mSession.SetSessionId(previousSession.GetSessionId());
-                    previousSession.CopyTradingMap(mSession);
-                    mSession.UpdateLatestPosition(posArr);
-                }
-                else
-                {
-                    TerminalAPI::DoShowMessagePopup("ERROR in INIT Client: Same previous session but weith is different");
-                    res = false;
-                }
-            }
-            // 4, possion cũ bị close hết: chờ connecting
-            else if (closedPosNum == previousSession.GetClientPositionNumer())
-            {
-                // do nothing
-            }
-            else
-            {
-                TerminalAPI::DoShowMessagePopup("ERROR in INIT Client!!!");
-                res = false;
-            }
+            mSession.SetSessionId(previousSession.GetSessionId());
+            previousSession.CopyTradingMap(mSession);
+            mSession.UpdateLatestPosition(posArr);
         }
         // server  -> client: 
-        // 	1, nếu dữ liệu cũ còn position đang chạy ->  close EA
-        //	2, case khacs: chờ connecting
+        //     1, nếu dữ liệu cũ còn position đang chạy ->  close EA
+        //     2, case khác: update session theo trạng thái hiện tại (ko lấy dữ liệu cũ)
         else if (previousSession.GetMode() == eCPT_MODE_SERVER)
         {
             ulong oldMap[];
@@ -357,23 +309,25 @@ public:
                     if (oldMap[i] != 0 && oldMap[i + 1] != 0 && oldMap[i + 1] == posArr[j].position_ticket)
                     {
                         isOldTradeIsExisted = true;
+                        break;
                     }
                 }
                 if (isOldTradeIsExisted) break;
             }
             if (isOldTradeIsExisted)
             {
-                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: Positions existed!!! please check!!!");
+                TerminalAPI::DoShowMessagePopup("ERROR init SERVER -> CLIENT: CPT Positions existed!!! please check!!!");
                 res = false;
             }
+            else
+            {
+                mSession.UpdateLatestPosition(posArr);
+            }
         }
-        // Unknown -> client: warning nếu đang có postion và chờ connecting
         else
         {
-            if (currentPosNum > 0)
-            {
-                TerminalAPI::DoShowMessagePopup("WARNING init CLIENT: Positions existed!!!");
-            }
+            TerminalAPI::DoShowMessagePopup("ERROR init CLIENT: invalid previous Mode");
+            res = false;
         }
         if (res == true)
         {
