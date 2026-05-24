@@ -544,19 +544,21 @@ private:
         int closedTicketsCount = 0;
         for (i = 0; i < tradingMapSize; i += 2)
         {
-            isExisted = false;
-            for (j = 0; j < server_posNum; j++)
+            if (tradingMap[i] != 0)
             {
-                if (tradingMap[i] == 0 || tradingMap[i] == server_positions[j].position_ticket)
+                isExisted = false;
+                for (j = 0; j < server_posNum; j++)
                 {
-                    isExisted = true; break;
+                    if (tradingMap[i] == server_positions[j].position_ticket)
+                    {
+                        isExisted = true; break;
+                    }
                 }
-            }
-            if (isExisted == false)
-            {
-                ArrayResize(server_closedTickets, closedTicketsCount + 1);
-                server_closedTickets[closedTicketsCount] = tradingMap[i];
-                closedTicketsCount += 1;
+                if (isExisted == false)
+                {
+                    server_closedTickets[closedTicketsCount] = tradingMap[i];
+                    closedTicketsCount += 1;
+                }
             }
         }
         // 2.2
