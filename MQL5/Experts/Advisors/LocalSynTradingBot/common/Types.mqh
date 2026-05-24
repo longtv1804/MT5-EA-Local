@@ -71,6 +71,14 @@ enum EnumCloseReason
     eCLOSE_REASON_OTHER
 };
 
+enum EnumSymbolType
+{
+    eSYMBOL_UNKNOWN,
+    eSYMBOL_GOLD,
+    eSYMBOL_BTC,
+    eSYMBOL_ETH
+};
+
 struct iPosition
 {
     ulong                position_ticket;

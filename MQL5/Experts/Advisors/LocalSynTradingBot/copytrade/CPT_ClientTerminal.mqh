@@ -483,14 +483,25 @@ private:
     /*
     *   thực hiện update data theo server
     */
-    void Connecting_OnServerUpdate(int server_sessionId, iPosition &server_positions[], iPosition &now_client_positions[])
+    void Connecting_OnServerUpdate(int server_sessionId, string serverSymbol, iPosition &server_positions[], iPosition &now_client_positions[])
     {
         int server_posNum = ArraySize(server_positions);
         int now_client_posNum = ArraySize(now_client_positions);
-        LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + 
-                                    " my-session:" +(string)mSession.GetSessionId() + 
-                                    " server-posnum:" + (string)server_posNum +
-                                    " client-posnum:" + (string)now_client_posNum);
+        LOGD("CMD-UPDATE detected: remote-session:" + (string)server_sessionId + " symbol:" + serverSymbol + " server-posnum:" + (string)server_posNum);
+        LOGD("my-session:" +(string)mSession.GetSessionId() + " symbol:" + _Symbol + " client-posnum:" + (string)now_client_posNum);
+
+        //*********************************************************************************
+        // check the Symbol first
+        //*********************************************************************************
+        EnumSymbolType serverSymbolType = CheckSymbolType(serverSymbol);
+        EnumSymbolType localSymbolType = CheckSymbolType(_Symbol);
+        if (serverSymbolType != localSymbolType)
+        {
+            TerminalAPI::DoShowMessagePopup("ERROR: please attach to exact chart same as server!!!");
+            TerminalAPI::DoCloseEA();
+            return;
+        }
+
         int i = 0, j = 0;
         bool isExisted = false;
         //*********************************************************************************
@@ -676,6 +687,7 @@ private:
             if (client_id == m_pInOutManager.GetId())
             {
                 string PositonArrayStr = ParseJsonValue(cmdStr, "curr_positions");
+                string tradeSymbol = ParseJsonValue(cmdStr, "trade_symbol");
                 int server_sessionId = ParseIntValue(cmdStr, "session_id");
 
                 iPosition server_positions[];
@@ -684,7 +696,7 @@ private:
                 iPosition now_client_positions[];
                 TerminalAPI::DoGetAllPosition(now_client_positions);
 
-                Connecting_OnServerUpdate(server_sessionId, server_positions, now_client_positions);
+                Connecting_OnServerUpdate(server_sessionId, tradeSymbol, server_positions, now_client_positions);
 
                 // chuyển cmd còn lại sang Connected_HandleServerCommands
                 string remain_cmds[];

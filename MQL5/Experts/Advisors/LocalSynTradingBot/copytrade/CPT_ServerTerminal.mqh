@@ -197,6 +197,7 @@ private:
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_UPDATE);
         builder.Set("session_id", (string)mCopyTradeSessionId);
+        builder.Set("trade_symbol", _Symbol);
         builder.Set("to_client", (string)client_id);
         builder.Set("curr_positions", currentPositions);
 

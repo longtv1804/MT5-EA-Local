@@ -403,3 +403,44 @@ string ToJson(EnumCmdId cmdId, string jsonData)
 	jsonData = "{\"cmd\":" + IntegerToString(cmdId) + ",\"cmd_data\":" + jsonData + "}";
 	return jsonData;
 }
+
+//=======================================================================================
+//
+//	other
+//
+//=======================================================================================
+EnumSymbolType CheckSymbolType(string symbol)
+{
+    // Chuẩn hóa uppercase
+	string s = symbol;
+    StringToUpper(s);
+
+    // ==================================================
+    // GOLD
+    // Các dạng phổ biến:
+    // XAUUSD, XAUUSDm, GOLD, GOLDmicro...
+    if(StringFind(s, "XAU") >= 0 || StringFind(s, "GOLD") >= 0)
+    {
+        return eSYMBOL_GOLD;
+    }
+
+    // ==================================================
+    // BTC
+    // Các dạng phổ biến:
+    // BTCUSD, BTCUSDT, BTCUSDm, BTC#, XBTUSD...
+    if(StringFind(s, "BTC") >= 0 || StringFind(s, "XBT") >= 0)
+    {
+        return eSYMBOL_BTC;
+    }
+
+    // ==================================================
+    // ETH
+    // Các dạng phổ biến:
+    // ETHUSD, ETHUSDT, ETHUSDm...
+    if(StringFind(s, "ETH") >= 0)
+    {
+        return eSYMBOL_ETH;
+    }
+
+    return eSYMBOL_UNKNOWN;
+}
