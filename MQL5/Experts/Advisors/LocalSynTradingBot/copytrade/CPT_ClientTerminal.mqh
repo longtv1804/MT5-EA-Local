@@ -534,7 +534,7 @@ private:
         for (i = 0; i < tradingMapSize; i += 2)
         {
             isExisted = false;
-            for (int j = 0; j < server_posNum; j++)
+            for (j = 0; j < server_posNum; j++)
             {
                 if (tradingMap[i] == 0 || tradingMap[i] == server_positions[j].position_ticket)
                 {
@@ -760,6 +760,11 @@ private:
             LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
             return;
         }
+        if (mSession.HasServerTicket(newPos.position_ticket))
+        {
+            LOGE("server-ticket is already in the trading map: " + (string)newPos.position_ticket);
+            return;
+        }
         CopyTradeEvent ev = {0};
         ev.eventId = EV_ADD_NEW_POSITION;
         ev.server_ticket = newPos.position_ticket;
@@ -800,7 +805,6 @@ private:
             }
             else
             {
-                LOGD("can not find the target, server-ticket:" + (string)closedPos.position_ticket);
                 // thử remove data trong session
                 mSession.RemoveCopyTradePosition(closedPos.position_ticket, 0);
             }
