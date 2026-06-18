@@ -245,7 +245,7 @@ public:
             else
             {
                 LOGE("Failed OrderSelect index=" + IntegerToString(i) + " Error=" + IntegerToString(GetLastError()));
-                return false
+                return false;
             }
         }
         // resize đúng số lượng market orders
