@@ -169,7 +169,7 @@ public:
         return total_volume;
     }
 
-    static void DoGetAllPosition(iPosition &resArr[])
+    static bool DoGetAllPosition(iPosition &resArr[])
     {
     #ifdef __MQL5__
         int total = PositionsTotal();
@@ -180,6 +180,7 @@ public:
             ulong ticket = PositionGetTicket(i);
             if(PositionSelectByTicket(ticket))
             {
+                resArr[i] = iPosition();
                 resArr[i].position_ticket = ticket;
                 resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
                 ENUM_POSITION_TYPE pos_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
@@ -203,7 +204,7 @@ public:
             else
             {
                 LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
-                resArr[i].status = ePOSITION_STATUS_UNKNOWN;
+                return false;
             }
         }
     #else // MQL4
@@ -219,6 +220,7 @@ public:
                 if(type != OP_BUY && type != OP_SELL)
                     continue;
 
+                resArr[idx] = iPosition();
                 resArr[idx].position_ticket = (ulong)OrderTicket();
                 resArr[idx].symbol = OrderSymbol();
 
@@ -243,11 +245,13 @@ public:
             else
             {
                 LOGE("Failed OrderSelect index=" + IntegerToString(i) + " Error=" + IntegerToString(GetLastError()));
+                return false
             }
         }
         // resize đúng số lượng market orders
         ArrayResize(resArr, idx);
     #endif
+        return true;
     }
 
     static bool DoClosePosition(ulong position_ticket)
@@ -515,5 +519,29 @@ public:
     #endif
         LOGD(StringFormat("Close success ticket=%I64u", ticket));
         return true;
+    }
+
+    static void SendEmail(string title, string content)
+    {
+        string server_name = AccountInfoString(ACCOUNT_SERVER);
+        #ifdef __MQL5__
+        long acc_id = AccountInfoInteger(ACCOUNT_LOGIN);
+        #else
+        long acc_id = AccountNumber();
+        #endif
+
+        bool result = SendMail(
+            "[" + server_name + " - " + (string)acc_id + "]" + title,
+            "server:" + server_name + "\n" +
+            "acc:" + (string)acc_id + "\n\n" +
+            content
+        );
+
+        if(result) {
+            LOGD("notificaition sent");
+        }
+        else {
+            LOGE("SendMail failed. Error=" + (string)GetLastError());
+        }
     }
 };

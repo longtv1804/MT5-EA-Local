@@ -161,6 +161,12 @@ private:
                 {
                     mSession.AddCopyTradePosition(mCopyTradeEventQueue[0].server_ticket, 0);
                 }
+                else if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
+                {
+                    TerminalAPI::SendEmail("ClosePosition " + (string)mCopyTradeEventQueue[0].target_ticket + "FAILED",
+                        "close position failed, ticket=" + (string)mCopyTradeEventQueue[0].target_ticket + 
+                        " server-ticket=" + (string)mCopyTradeEventQueue[0].server_ticket);
+                }
             }
             Execute();
         }

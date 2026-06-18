@@ -195,7 +195,18 @@ public:
     {
         // lấy snapshot hiện tại
         iPosition current_positions[];
-        TerminalAPI::DoGetAllPosition(current_positions);
+        bool res = false;
+        int retryCount = 0;
+        while (res == false && retryCount < 3)
+        {
+            res = TerminalAPI::DoGetAllPosition(current_positions);
+            retryCount += 1;
+        }
+        if (res == false)
+        {
+            LOGE("can not DoGetAllPosition() after 3 try!!!");
+            return;
+        }
 
         int cur_total  = ArraySize(current_positions);
         int prev_total = ArraySize(mPositions);
