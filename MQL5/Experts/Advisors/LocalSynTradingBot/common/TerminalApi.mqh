@@ -544,4 +544,25 @@ public:
             LOGE("SendMail failed. Error=" + (string)GetLastError());
         }
     }
+
+    static int GetPositionCount()
+    {
+        #ifdef __MQL5__
+        int total = PositionsTotal();
+        #else
+        int total = OrdersTotal();
+        #endif
+        return total;
+    }
+
+    static double GetFloatingPNL()
+    {
+        double floatingPnl = 0;
+        #ifdef __MQL5__
+        floatingPnl = AccountInfoDouble(ACCOUNT_EQUITY) - AccountInfoDouble(ACCOUNT_BALANCE);
+        #else
+        floatingPnl = AccountEquity() - AccountBalance();
+        #endif
+        return floatingPnl;
+    }
 };

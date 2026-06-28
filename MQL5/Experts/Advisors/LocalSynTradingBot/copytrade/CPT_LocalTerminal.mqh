@@ -44,4 +44,14 @@ public:
 ***********************************************************************************/
 public:
     virtual void DoPoll() = 0;
+
+
+/**********************************************************************************
+*
+*  for feature: revert copy trade positions
+*
+***********************************************************************************/
+public:
+    virtual void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold) {}
+    virtual void Do_RP_CheckSLAndTP() {}
 };

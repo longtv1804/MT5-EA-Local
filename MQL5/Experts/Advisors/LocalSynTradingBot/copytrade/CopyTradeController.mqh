@@ -52,6 +52,11 @@ public:
         return mIsInitSuccessed;
     }
 
+    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold)
+    {
+        m_MyTerminal.SetRevertPositionParam(isEnable, slThreshold, tpThreshold);
+    }
+
     void Terminate()
     {
         // chỉ khi init thành công mới save data
@@ -74,6 +79,7 @@ public:
         CheckLocalPositionChanged();
         m_MyTerminal.DoPoll();
 #endif
+        m_MyTerminal.Do_RP_CheckSLAndTP();
     }
 
 /**********************************************************************************

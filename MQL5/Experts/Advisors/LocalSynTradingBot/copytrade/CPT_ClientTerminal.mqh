@@ -339,6 +339,65 @@ public:
 
     /**********************************************************************************
     *
+    *   Copytrade with reverted position:
+    *       sell -> buy
+    *       buy  -> sell
+    *
+    ***********************************************************************************/
+private:
+    bool mIsRevertPositionEnable;
+    double mStoplostThreshold;
+    double mTakeProfitThreshold;
+
+public:
+    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold) override
+    {
+        mIsRevertPositionEnable = isEnable;
+        mStoplostThreshold = slThreshold;
+        mTakeProfitThreshold = tpThreshold;
+        LOGD("mIsRevertPositionEnable" + (string)mIsRevertPositionEnable + 
+                " mStoplostThreshold" + (string)mStoplostThreshold + 
+                " mTakeProfitThreshold" + (string)mTakeProfitThreshold);
+    }
+
+    void Do_RP_CheckSLAndTP() override
+    {
+        // trong trường hợp thực hiện DoEndAllPositions()
+        // trong các timer tiếp theo, có thể các position chưa kịp close, điều này khiến logic phía dưới sẽ
+        // trigger DoEndAllPositions() nhiều lần.
+        // để tránh điều này, sử dụng một biến ls_delayCount để bỏ qua 5 lượt check tiếp theo.
+        static int ls_delayCount = 0;
+        if (ls_delayCount != 0 && ls_delayCount < 6)
+        {
+            ls_delayCount += 1;
+            return;
+        }
+
+        ls_delayCount = 0;
+        if (mIsRevertPositionEnable == true && TerminalAPI::GetPositionCount() > 0)
+        {
+            double pnl = TerminalAPI::GetFloatingPNL();
+            if (pnl < 0 && MathAbs(pnl) >= MathAbs(mStoplostThreshold))
+            {
+                LOGD("cur_pnl= " + (string)pnl + " over SL threshold=" + (string)mStoplostThreshold + " -> trigger stoploss");
+                TerminalAPI::DoEndAllPositions();
+                ls_delayCount = 1;
+            }
+            else if (pnl > 0 && pnl >= MathAbs(mTakeProfitThreshold))
+            {
+                LOGD("cur_pnl= " + (string)pnl + " over TP threshold=" + (string)mTakeProfitThreshold + " -> take profit");
+                TerminalAPI::DoEndAllPositions();
+                ls_delayCount = 1;
+            }
+            else
+            {
+                // do nothing in other situations
+            }
+        }
+    }
+
+    /**********************************************************************************
+    *
     *   Possions changed
     *
     ***********************************************************************************/
@@ -788,7 +847,25 @@ private:
         CopyTradeEvent ev = {0};
         ev.eventId = EV_ADD_NEW_POSITION;
         ev.server_ticket = newPos.position_ticket;
-        ev.position_type = newPos.position_type;
+        if (mIsRevertPositionEnable == true)
+        {
+            if (newPos.position_type == ePOSITION_TYPE_BUY)
+            {
+                ev.position_type = ePOSITION_TYPE_SELL;
+            }
+            else if (newPos.position_type == ePOSITION_TYPE_SELL)
+            {
+                ev.position_type = ePOSITION_TYPE_BUY;
+            }
+            else
+            {
+                LOGE("Unknown position type from server!!!");
+            }
+        }
+        else
+        {
+            ev.position_type = newPos.position_type;
+        }
         ev.volume = NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
         AddCopytradeEvent(ev);
     }
