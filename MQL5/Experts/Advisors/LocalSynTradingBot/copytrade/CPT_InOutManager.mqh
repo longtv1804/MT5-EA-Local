@@ -39,33 +39,35 @@ public:
     }
     bool InitFilesPath()
     {
-        if (mInputFile != "" && mOutputFile != "")
-        {
-            LOGE("FilePaths are initialized");
-            return false;
-        }
         int i = 0, size = 0;
         bool isFileExisted = false;
         if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_SERVER)
         {
-            // output file:
-            mOutputFile = CPT_SERVER_OUTPUT_FILE_PATH;
-            isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
-            if (isFileExisted == true)
+            // server thì ko cần init lại files path
+            if (mInputFile == "" || mOutputFile == "")
             {
-                TerminalAPI::DoShowMessagePopup("SERVER is already existed, close EA!!!");
-                // trường hợp SERVER đã tồn tại: 
-                // gán lại mOutputFile để tránh remove file khi terminate
-                mOutputFile = "";
-                TerminalAPI::DoCloseEA();
-                return false;
-            }
+                // output file:
+                mOutputFile = CPT_SERVER_OUTPUT_FILE_PATH;
+                isFileExisted = FileIsExist(mOutputFile, FILE_COMMON);
+                if (isFileExisted == true)
+                {
+                    TerminalAPI::DoShowMessagePopup("SERVER is already existed, close EA!!!");
+                    // trường hợp SERVER đã tồn tại: 
+                    // gán lại mOutputFile để tránh remove file khi terminate
+                    mOutputFile = "";
+                    TerminalAPI::DoCloseEA();
+                    return false;
+                }
 
-            // no need detect input file path
-            mInputFile = mOutputFile;
+                // no need detect input file path
+                mInputFile = mOutputFile;
+            }
         }
         else if (CommonDatacenter::s_copyTradeMode == eCPT_MODE_CLIENT)
         {
+            /*
+             * client cần init file-path mới mỗi lần connect
+            */
             // output file: thử 5 lần randome ID
             string outputFilePath = "";
             for (i = 0; i < 5; i++)
@@ -141,11 +143,7 @@ public:
         }
 
         // init input và output file paths
-        bool res = true;
-        if (mInputFile == "" || mOutputFile == "")
-        {
-            res = InitFilesPath();
-        }
+        bool res = InitFilesPath();
         if (res)
         {
             res = CreateOutputFile();
