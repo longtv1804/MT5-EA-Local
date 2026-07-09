@@ -4,11 +4,8 @@ class List
 {
 private:
     T mList[];
-    int mSize = 0;
+    int mSize;
     IComparator<T>* mComparer;
-
-public:
-    static const T INVALID_ITER;
 
 public:
     List(IComparator<T>* comparer)
@@ -69,7 +66,6 @@ public:
             if(mComparer.Equals(mList[i], obj))
                 return i;
         }
-
         return -1;
     }
 
@@ -81,16 +77,15 @@ public:
             if(mComparer.Equals(mList[i], obj))
             return true;
         }
-
         return false;
     }
 
-    T& At(int index)
+    T* At(int index) const
     {
         if(index < 0 || index >= mSize)
         {
-            return INVALID_ITER;
+            return NULL;
         }
-        return mList[index];
+        return &mList[index];
     }
 };
