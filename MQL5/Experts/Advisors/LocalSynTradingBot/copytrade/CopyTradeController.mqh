@@ -52,9 +52,14 @@ public:
         return mIsInitSuccessed;
     }
 
-    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold)
+    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold, int plan)
     {
-        m_MyTerminal.SetRevertPositionParam(isEnable, slThreshold, tpThreshold);
+        if (isEnable)
+        {
+            m_MyTerminal.SetRpEnable(isEnable);
+            m_MyTerminal.SetRpThresholds(slThreshold, tpThreshold);
+            m_MyTerminal.SetRpPlan(plan);
+        }
     }
 
     void Terminate()
@@ -79,7 +84,7 @@ public:
         CheckLocalPositionChanged();
         m_MyTerminal.DoPoll();
 #endif
-        m_MyTerminal.Do_RP_CheckSLAndTP();
+        m_MyTerminal.OnTimer();
     }
 
 /**********************************************************************************

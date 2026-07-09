@@ -14,6 +14,7 @@
 input int i_TerminalMode = 0;       // mode: 1 server, 2, 3, 4, 5.. clients
 input double i_Weight = 1.0;        // trong so
 input bool i_RevertPositionEnable = false;      // vao lenh nguoc
+input int i_RevertPositionPLAN = 0;             // plan_id
 input double i_RpStopLossThreshold = 100.00;    // gioi han am
 input double i_RpTakeProfitThreshold = 200.00;  // gioi han de takeprofit
 
@@ -55,7 +56,7 @@ int OnInit()
     {
         return INIT_FAILED;
     }
-    g_CopyTradeController.SetRevertPositionParam(i_RevertPositionEnable, i_RpStopLossThreshold, i_RpTakeProfitThreshold);
+    g_CopyTradeController.SetRevertPositionParam(i_RevertPositionEnable, i_RpStopLossThreshold, i_RpTakeProfitThreshold, i_RevertPositionPLAN);
     EventSetTimer(1);
     return(INIT_SUCCEEDED);
 }

@@ -1,7 +1,10 @@
 #include "../common/Types.mqh"
 #include "../common/Utils.mqh"
+#include "../common/TradeUtils.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_CopyTradeSession.mqh"
+#include "CPT_Strategy.mqh"
+#include "CPT_Strategy_Factory.mqh"
 
 class CPT_ClientTerminal : public CPT_LocalTerminal
 {
@@ -348,51 +351,78 @@ private:
     bool mIsRevertPositionEnable;
     double mStoplostThreshold;
     double mTakeProfitThreshold;
+    CPT_Strategy *mBuyStrategy;
+    CPT_Strategy *mSellStrategy;
 
-public:
-    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold) override
+    void Rp_OnPositionAdded(iPosition& newPos)
     {
-        mIsRevertPositionEnable = isEnable;
-        mStoplostThreshold = slThreshold;
-        mTakeProfitThreshold = tpThreshold;
-        LOGD("mIsRevertPositionEnable" + (string)mIsRevertPositionEnable + 
-                " mStoplostThreshold" + (string)mStoplostThreshold + 
-                " mTakeProfitThreshold" + (string)mTakeProfitThreshold);
+        switch(newPos.position_type)
+        {
+            case ePOSITION_TYPE_BUY: { 
+                mBuyStrategy.OnNewPositionAdded(newPos);
+                break;
+            }
+            case ePOSITION_TYPE_SELL: {
+                mSellStrategy.OnNewPositionAdded(newPos);
+                break;
+            }
+            default:
+                LOGE("Error position_type");
+                break;
+        }
+    }
+    void Rp_OnPositionClosed(iPosition& closedPos)
+    {
+        switch(closedPos.position_type)
+        {
+            case ePOSITION_TYPE_BUY: { 
+                mBuyStrategy.OnPositionClose(closedPos);
+                break;
+            }
+            case ePOSITION_TYPE_SELL: {
+                mSellStrategy.OnPositionClose(closedPos);
+                break;
+            }
+            default:
+                LOGE("Error position_type");
+                break;
+        }
     }
 
-    void Do_RP_CheckSLAndTP() override
+public:
+    void SetRpEnable(bool isEnable) override
     {
-        // trong trường hợp thực hiện DoEndAllPositions()
-        // trong các timer tiếp theo, có thể các position chưa kịp close, điều này khiến logic phía dưới sẽ
-        // trigger DoEndAllPositions() nhiều lần.
-        // để tránh điều này, sử dụng một biến ls_delayCount để bỏ qua 5 lượt check tiếp theo.
-        static int ls_delayCount = 0;
-        if (ls_delayCount != 0 && ls_delayCount < 6)
-        {
-            ls_delayCount += 1;
-            return;
-        }
+        mIsRevertPositionEnable = isEnable;
+        LOGD("mIsRevertPositionEnable=" + (string)mIsRevertPositionEnable);
+    }
 
-        ls_delayCount = 0;
-        if (mIsRevertPositionEnable == true && TerminalAPI::GetPositionCount() > 0)
+    void SetRpThresholds(double slThreshold, double tpThreshold) override
+    {
+        mStoplostThreshold = slThreshold;
+        mTakeProfitThreshold = tpThreshold;
+        LOGD("mStoplostThreshold=" + (string)mStoplostThreshold + " mTakeProfitThreshold=" + (string)mTakeProfitThreshold);
+    }
+
+    void SetRpPlan(int rp_plan) override
+    {
+        LOGD("rp_plan=" + (string)rp_plan);
+        mBuyStrategy = CPT_Strategy_Factory::MakeStrategy(rp_plan, ePOSITION_TYPE_BUY);
+        mSellStrategy = CPT_Strategy_Factory::MakeStrategy(rp_plan, ePOSITION_TYPE_SELL);
+    }
+
+    void OnTimer() override
+    {
+        double cur_price = 0.0;
+
+        if (mBuyStrategy)
         {
-            double pnl = TerminalAPI::GetFloatingPNL();
-            if (pnl < 0 && MathAbs(pnl) >= MathAbs(mStoplostThreshold))
-            {
-                LOGD("cur_pnl= " + (string)pnl + " over SL threshold=" + (string)mStoplostThreshold + " -> trigger stoploss");
-                TerminalAPI::DoEndAllPositions();
-                ls_delayCount = 1;
-            }
-            else if (pnl > 0 && pnl >= MathAbs(mTakeProfitThreshold))
-            {
-                LOGD("cur_pnl= " + (string)pnl + " over TP threshold=" + (string)mTakeProfitThreshold + " -> take profit");
-                TerminalAPI::DoEndAllPositions();
-                ls_delayCount = 1;
-            }
-            else
-            {
-                // do nothing in other situations
-            }
+            cur_price = TerminalAPI::GetCurrentPrice(_Symbol, true);
+            mBuyStrategy.OnPriceUpdate(cur_price);
+        }
+        if (mSellStrategy)
+        {
+            cur_price = TerminalAPI::GetCurrentPrice(_Symbol, false);
+            mSellStrategy.OnPriceUpdate(cur_price);
         }
     }
 
@@ -414,6 +444,10 @@ public:
                 isCopyTradePositionAdded = true;
                 mCopyTradeEventQueue[0].status = EVS_DONE;
                 mCopyTradeEventQueue[0].target_ticket = newPos.position_ticket;
+                if (mIsRevertPositionEnable)
+                {
+                    Rp_OnPositionAdded(newPos);
+                }
             }
         }
 
@@ -469,6 +503,10 @@ public:
             {
                 mSession.RemoveCopyTradePosition(0, closedPos.position_ticket);
             }
+        }
+        if (mIsRevertPositionEnable)
+        {
+            Rp_OnPositionClosed(closedPos);
         }
     }
 
@@ -816,21 +854,6 @@ private:
         }
     }
 
-    double NormalizeVolume(string symbol, double volume)
-    {
-        double minLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MIN);
-        double maxLot = SymbolInfoDouble(symbol, SYMBOL_VOLUME_MAX);
-        double step   = SymbolInfoDouble(symbol, SYMBOL_VOLUME_STEP);
-
-        volume = MathMax(minLot, MathMin(maxLot, volume));
-
-        volume = MathRound(volume / step) * step;
-
-        int digits = (int)MathRound(-MathLog10(step));
-
-        return NormalizeDouble(volume, digits);
-    }
-
     void OnServer_NewPositionAdded(int session, iPosition &newPos)
     {
         LOGD("session: " + (string)session + " " + ToString(newPos));
@@ -852,10 +875,12 @@ private:
             if (newPos.position_type == ePOSITION_TYPE_BUY)
             {
                 ev.position_type = ePOSITION_TYPE_SELL;
+                ev.volume = mSellStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
             }
             else if (newPos.position_type == ePOSITION_TYPE_SELL)
             {
                 ev.position_type = ePOSITION_TYPE_BUY;
+                ev.volume = mBuyStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
             }
             else
             {
@@ -865,8 +890,8 @@ private:
         else
         {
             ev.position_type = newPos.position_type;
+            ev.volume = TradeUtils::NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
         }
-        ev.volume = NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
         AddCopytradeEvent(ev);
     }
 
@@ -895,7 +920,7 @@ private:
                     CopyTradeEvent ev = {0};
                     ev.eventId = EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE;
                     ev.server_ticket = closedPos.position_ticket;
-                    ev.volume = NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
+                    ev.volume = TradeUtils::NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
                     ev.position_type = closedPos.position_type;
                     AddCopytradeEvent(ev);
                 }
@@ -910,7 +935,7 @@ private:
         CopyTradeEvent ev = {0};
         ev.eventId = EV_CLOSED_POSITION;
         ev.server_ticket = closedPos.position_ticket;
-        ev.volume = NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
+        ev.volume = TradeUtils::NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
         ev.position_type = closedPos.position_type;
         ev.target_ticket = target_ticket;
         AddCopytradeEvent(ev);

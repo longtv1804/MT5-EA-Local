@@ -52,6 +52,8 @@ public:
 *
 ***********************************************************************************/
 public:
-    virtual void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold) {}
-    virtual void Do_RP_CheckSLAndTP() {}
+    virtual void OnTimer() {}
+    virtual void SetRpEnable(bool isEnable) {}
+    virtual void SetRpPlan(int rp_plan) {}
+    virtual void SetRpThresholds(double slThreshold, double tpThreshold) {}
 };
