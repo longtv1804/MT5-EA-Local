@@ -79,8 +79,9 @@ enum EnumSymbolType
     eSYMBOL_ETH
 };
 
-struct iPosition
+class iPosition
 {
+public:
     ulong                position_ticket;
     string               symbol;
     EnumPositionType     position_type; // ePOSITION_TYPE_BUY, ePOSITION_TYPE_SELL, ...
@@ -106,8 +107,9 @@ enum EventState
     EVS_DROP
 };
 
-struct CopyTradeEvent
+class CopyTradeEvent
 {
+public:
     int eventId;
     EventState status;
     int retry_count;
