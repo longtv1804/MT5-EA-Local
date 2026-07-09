@@ -299,7 +299,7 @@ public:
     #endif
         return res;
     }
-
+    
     static bool DoClosePartialPosition(ulong position_ticket, double volume)
     {
         bool res = false;
@@ -564,5 +564,15 @@ public:
         floatingPnl = AccountEquity() - AccountBalance();
         #endif
         return floatingPnl;
+    }
+
+    static double GetCurrentPrice(string symbol, bool isBuy)
+    {
+    #ifdef __MQL5__
+        return SymbolInfoDouble(symbol, isBuy ? SYMBOL_ASK : SYMBOL_BID);
+    #else
+        RefreshRates();
+        return isBuy ? Ask : Bid;
+    #endif
     }
 };
