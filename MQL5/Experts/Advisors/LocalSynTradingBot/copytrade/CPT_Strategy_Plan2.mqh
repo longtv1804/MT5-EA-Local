@@ -27,23 +27,23 @@ private:
     void SetStopLost(double value)
     {
         mStopLostPrice = value;
-        LOGD("Set mStopLostPrice=" + (string)mStopLostPrice);
+        LOGD("Strategy[" + PositionTypeToString(mType) + "] Set mStopLostPrice=" + (string)mStopLostPrice);
     }
     void UpdateStopLost(double value)
     {
         if (mType == ePOSITION_TYPE_BUY)
         {
             mStopLostPrice += MathAbs(value);
-            LOGD("Update mStopLostPrice=" + (string)mStopLostPrice);
+            LOGD("Strategy[" + PositionTypeToString(mType) + "] Update mStopLostPrice=" + (string)mStopLostPrice);
         }
         else if (mType == ePOSITION_TYPE_SELL)
         {
             mStopLostPrice -= MathAbs(value);
-            LOGD("Update mStopLostPrice=" + (string)mStopLostPrice);
+            LOGD("Strategy[" + PositionTypeToString(mType) + "] Update mStopLostPrice=" + (string)mStopLostPrice);
         }
         else
         {
-            LOGE("error mType");
+            LOGE("Strategy[" + PositionTypeToString(mType) + "] error mType");
         }
     }
 
@@ -69,21 +69,21 @@ public:
         else
         {
             planResIdx = mPlanIdx;
-            mPlanIdx++;
         }
-        LOGD("planResIdx=" + (string)planResIdx + " planSize=" + (string)planSize);
+        LOGD("Strategy[" + PositionTypeToString(mType) + "] planResIdx=" + (string)planResIdx + " planSize=" + (string)planSize);
         return mVolumePlan[planResIdx];
     }
 
     void OnPriceUpdate(double curPrice) override
     {
-        if (mPlanIdx == 0) return;
+        if (mPlanIdx == 0 || mPositions.Size() == 0 || mStopLostPrice == 0.0)
+            return;
         if (mType == ePOSITION_TYPE_BUY)
         {
             // check stoplost: nếu giá giảm/tăng tới mStopLostPrice thì close strategy
             if (curPrice <= mStopLostPrice || TradeUtils::IsSamePrice(curPrice , mStopLostPrice))
             {
-                LOGD("STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
+                LOGD("Strategy[" + PositionTypeToString(mType) + "] STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
                 for(int i = 0; i < mPositions.Size(); i++)
                 {
                     const iPosition *pos = mPositions.At(i);
@@ -103,7 +103,7 @@ public:
         {
             if (curPrice >= mStopLostPrice || TradeUtils::IsSamePrice(curPrice , mStopLostPrice))
             {
-                LOGD("STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
+                LOGD("Strategy[" + PositionTypeToString(mType) + "] STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
                 for(int i = 0; i < mPositions.Size(); i++)
                 {
                     const iPosition *pos = mPositions.At(i);
@@ -121,13 +121,14 @@ public:
         }
         else
         {
-            LOGE("Wrong mType");
+            LOGE("Strategy[" + PositionTypeToString(mType) + "] Wrong mType");
         }
     }
 
     void OnNewPositionAdded(iPosition& newPos) override
     {
         mPositions.Add(newPos);
+        mPlanIdx++;
         if (mPositions.Size() == 1)
         {
             double sl = newPos.price_open;
@@ -141,7 +142,7 @@ public:
             }
             else
             {
-                LOGE("error mType");
+                LOGE("Strategy[" + PositionTypeToString(mType) + "] error mType");
             }
             SetStopLost(sl);
         }
@@ -154,7 +155,7 @@ public:
             }
             else
             {
-                LOGE("zeroFpnlPrice = 0");
+                LOGE("Strategy[" + PositionTypeToString(mType) + "] zeroFpnlPrice = 0");
             }
         }
     }
@@ -176,7 +177,7 @@ public:
             }
             else
             {
-                LOGE("zeroFpnlPrice = 0");
+                LOGE("Strategy[" + PositionTypeToString(mType) + "] zeroFpnlPrice = 0");
             }
         }
     }

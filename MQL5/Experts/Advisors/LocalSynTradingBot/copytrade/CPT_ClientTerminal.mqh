@@ -338,6 +338,15 @@ public:
         {
             LOGD("Event Queue is not Emplty: " + ToString(mCopyTradeEventQueue[i]));
         }
+
+        if (mBuyStrategy)
+        {
+            delete mBuyStrategy;
+        }
+        if (mSellStrategy)
+        {
+            delete mSellStrategy;
+        }
     }
 
     /**********************************************************************************
