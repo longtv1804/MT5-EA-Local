@@ -127,3 +127,17 @@ public:
     // magic number để tracking lệnh thành công hay ko
     ulong tracking_number;
 };
+
+struct CopyTradeReqData
+{
+    ulong server_ticket;
+    double volume;
+    EnumPositionType position_type;
+
+    // với close: là ticket cần close, 
+    // với add: sau khi đặt lệnh thảnh công thì lưu vào
+    ulong target_ticket;
+
+    // magic number để tracking lệnh thành công hay ko
+    ulong tracking_number;
+};
