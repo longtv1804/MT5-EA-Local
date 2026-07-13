@@ -1,7 +1,5 @@
-#define LOGD(msg) Print("D ", __FUNCTION__, "() ", msg)
-#define LOGE(msg) Print("E ", __FUNCTION__, "() ", msg)
-
 #include "Types.mqh"
+#include "Logging.mqh"
 
 //=======================================================================================
 //

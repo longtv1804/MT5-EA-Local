@@ -1,5 +1,6 @@
 ﻿#include "Types.mqh"
 #include "Utils.mqh"
+#include "Logging.mqh"
 #include "Constants.mqh"
 #include "CommonDataCenter.mqh"
 #ifdef __MQL5__

@@ -1,5 +1,6 @@
 #include "../common/Types.mqh"
 #include "../common/Utils.mqh"
+#include "../common/Logging.mqh"
 #include "../common/TradeUtils.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_CopyTradeSession.mqh"

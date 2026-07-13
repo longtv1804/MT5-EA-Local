@@ -1,4 +1,5 @@
 #include "../common/Utils.mqh"
+#include "../common/Logging.mqh"
 #include "../common/Types.mqh"
 #include "../common/Constants.mqh"
 #include "../common/CommonDatacenter.mqh"

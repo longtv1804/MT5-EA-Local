@@ -3,6 +3,7 @@
 #include "../common/TerminalApi.mqh"
 #include "../common/Types.mqh"
 #include "../common/Utils.mqh"
+#include "../common/Logging.mqh"
 
 class CPT_InOutManager
 {

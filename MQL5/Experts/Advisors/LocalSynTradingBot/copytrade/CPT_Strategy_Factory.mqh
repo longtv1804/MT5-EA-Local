@@ -1,3 +1,4 @@
+#include "../common/Logging.mqh"
 #include "../common/Types.mqh"
 #include "CPT_Strategy.mqh"
 #include "CPT_Strategy_Plan1.mqh"

@@ -3,6 +3,7 @@
 #include "../common/Types.mqh"
 #include "../common/TradeUtils.mqh"
 #include "../common/Utils.mqh"
+#include "../common/Logging.mqh"
 #include "../common/TerminalApi.mqh"
 #include "CPT_Strategy.mqh"
 

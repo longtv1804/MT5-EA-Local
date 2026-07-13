@@ -1,5 +1,6 @@
 #include "CPT_Strategy.mqh"
 #include "../common/TradeUtils.mqh"
+#include "../common/Logging.mqh"
 /*
 *    vào lệnh giảm tăng dần theo volume của serverVolume
 */

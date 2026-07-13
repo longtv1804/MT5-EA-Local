@@ -1,3 +1,4 @@
+#include "../common/Logging.mqh"
 #include "../common/Types.mqh"
 #include "../common/JsonBuilder.mqh"
 #include "CPT_LocalTerminal.mqh"
