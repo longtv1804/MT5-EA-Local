@@ -1,4 +1,4 @@
-#include "Handler.mqh"
+#include "HandlerInterface.mqh"
 #include "Event.mqh"
 #include "../common/Logging.mqh"
 
@@ -90,7 +90,7 @@ public:
         }
     }
 
-    bool HasEvent(const int event_id, const Handler* handler) const
+    bool HasEvent(const int event_id, const iHandler* handler) const
     {
         if (mInIdx == mOutIdx)
         {
@@ -106,7 +106,7 @@ public:
         return false;
     }
 
-    bool TryIgnoreEvent(const int event_id, const Handler* handler)
+    bool TryIgnoreEvent(const int event_id, const iHandler* handler)
     {
         if (mInIdx == mOutIdx)
         {

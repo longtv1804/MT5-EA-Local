@@ -1,12 +1,32 @@
-#include "Handler.mqh"
 #include "../common/Types.mqh"
+class iHandler;
 
 class Event
 {
 public:
+    Event()
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+       eventId = 0;
+       state = EVS_CREATED;
+       retry_count = 0;
+       time_out = 0;
+       arg1 = arg2 = 0;
+       arg3 = 0.0;
+       arg4 = 0;
+       arg5 = "";
+       handler = NULL;
+       isReq = false;
+    }
+
     int eventId;
     enum EnumEventState
     {
+        EVS_CREATED,
         EVS_QUEUED,
         EVS_DISPATCHING,
         EVS_DROP,
@@ -14,10 +34,11 @@ public:
         EVS_FAILED
     };
     EnumEventState state;
+    bool isReq;
     int retry_count;
     int time_out;
 
-    Handler *handler;
+    iHandler *handler;
 
     // với các dữ liệu đơn giản, ko phải struct, không phải array,...
     // dùng các arguments để lưu trữ và sử dụng
