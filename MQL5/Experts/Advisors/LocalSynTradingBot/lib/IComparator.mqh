@@ -1,4 +1,5 @@
 #include "../common/Types.mqh"
+#include "../queue/Event.mqh"
 
 template<typename T>
 class IComparator
@@ -43,3 +44,30 @@ public:
    }
 };
 
+class EventComparator : public IComparator<Event>
+{
+public:
+   bool Equals(const Event &a, const Event &b)
+   {
+      bool res = false;
+      res &= (a.eventId == b.eventId);
+      res &= (a.arg1 == b.arg1);
+      res &= (a.arg2 == b.arg2);
+      res &= (a.arg3 == b.arg3);
+      res &= (a.arg4 == b.arg4);
+      res &= (a.arg5 == b.arg5);
+      res &= (a.arg6 == b.arg6);
+      res &= (a.arg7 == b.arg7);
+      res &= (a.handler == b.handler);
+      res &= (ArraySize(a.data) == ArraySize(b.data));
+      if (res)
+      {
+         int dataSize = ArraySize(a.data);
+         for (int i = 0; i < dataSize; i++)
+         {
+            res &= (a.data[i] == b.data[i]);
+         }
+      }
+      return res;
+   }
+};

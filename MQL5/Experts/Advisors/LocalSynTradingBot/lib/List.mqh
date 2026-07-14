@@ -4,19 +4,30 @@ class List
 {
 private:
     T mList[];
+    int mCapacity;
     int mSize;
     IComparator<T>* mComparer;
 
 public:
+    List()
+    {
+        mComparer = NULL;
+        mSize = 0;
+        mCapacity = 2;
+        ArrayResize(mList, mCapacity);
+    }
+
     List(IComparator<T>* comparer)
     {
         mComparer = comparer;
         mSize = 0;
-        ArrayResize(mList, 0);
+        mCapacity = 2;
+        ArrayResize(mList, mCapacity);
     }
 
     ~List()
     {
+        ArrayResize(mList, 0);
         if (mComparer)
         {
             delete mComparer;
@@ -30,7 +41,11 @@ public:
 
     void Add(const T &obj)
     {
-        ArrayResize(mList, mSize + 1);
+        if (mSize >= mCapacity)
+        {
+            mCapacity *= 2;
+            ArrayResize(mList, mCapacity);
+        }
         mList[mSize] = obj;
         mSize++;
     }
@@ -47,9 +62,19 @@ public:
         {
             mList[i] = mList[i + 1];
         }
-
         mSize--;
-        ArrayResize(mList, mSize);
+        return true;
+    }
+
+    bool Remove(const int idx)
+    {
+        if (idx < 0 || idx >= mSize) return false;
+
+        for(int i = index; i < mSize - 1; i++)
+        {
+            mList[i] = mList[i + 1];
+        }
+        mSize--;
         return true;
     }
 
@@ -57,10 +82,14 @@ public:
     {
         ArrayResize(mList, 0);
         mSize = 0;
+        mCapacity = 2;
+        ArrayResize(mList, mCapacity);
     }
 
     int FindIndex(const T &obj) const
     {
+        if(mComparer == NULL) return -1;
+
         for(int i = 0; i < mSize; i++)
         {
             if(mComparer.Equals(mList[i], obj))
