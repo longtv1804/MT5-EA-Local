@@ -46,28 +46,55 @@ public:
 
 class EventComparator : public IComparator<Event>
 {
+private:
+   int mBitMark;
 public:
+   enum
+   {
+      CHECK_BIT_MARK_eventId        = 1 << 0,
+      CHECK_BIT_MARK_handler     	= 1 << 1,
+      CHECK_BIT_MARK_arg_int_1   	= 1 << 2,
+      CHECK_BIT_MARK_arg_int_2    	= 1 << 3,
+      CHECK_BIT_MARK_arg_ulong_1    = 1 << 4,
+      CHECK_BIT_MARK_arg_ulong_2    = 1 << 5,
+      CHECK_BIT_MARK_arg_double_1   = 1 << 6,
+      CHECK_BIT_MARK_arg_double_2   = 1 << 7,
+      CHECK_BIT_MARK_arg_string     = 1 << 8,
+      CHECK_BIT_MARK_data           = 1 << 9,
+   };
+
+   EventComparator()
+   {
+      mBitMark = 0;
+      mBitMark |= CHECK_BIT_MARK_eventId;
+      mBitMark |= CHECK_BIT_MARK_handler;
+   }
+
+   void SetBitMark(int bitmark)
+   {
+      mBitMark |= bitmark;
+   }
+
    bool Equals(const Event &a, const Event &b)
    {
-      bool res = false;
-      res &= (a.eventId == b.eventId);
-      res &= (a.arg1 == b.arg1);
-      res &= (a.arg2 == b.arg2);
-      res &= (a.arg3 == b.arg3);
-      res &= (a.arg4 == b.arg4);
-      res &= (a.arg5 == b.arg5);
-      res &= (a.arg6 == b.arg6);
-      res &= (a.arg7 == b.arg7);
-      res &= (a.handler == b.handler);
-      res &= (ArraySize(a.data) == ArraySize(b.data));
-      if (res)
+      if ((mBitMark & CHECK_BIT_MARK_eventId)      != 0 && (a.eventId != b.eventId)                         ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_handler)      != 0 && (a.handler != b.handler)                         ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_int_1)    != 0 && (a.arg_int_1 != b.arg_int_1)                     ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_int_2)    != 0 && (a.arg_int_2 != b.arg_int_2)                     ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_double_1) != 0 && MathAbs(a.arg_double_1 - b.arg_double_1) > 0.001 ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_double_2) != 0 && MathAbs(a.arg_double_2 - b.arg_double_2) > 0.001 ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_ulong_1)  != 0 && (a.arg_ulong_1 != b.arg_ulong_1)                 ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_ulong_2)  != 0 && (a.arg_ulong_2 != b.arg_ulong_2)                 ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_arg_string)   != 0 && (a.arg_string != b.arg_string)                   ) return false;
+      if ((mBitMark & CHECK_BIT_MARK_data)         != 0)
       {
+         if (ArraySize(a.data) != ArraySize(b.data)) return false;
          int dataSize = ArraySize(a.data);
          for (int i = 0; i < dataSize; i++)
          {
-            res &= (a.data[i] == b.data[i]);
+            if (a.data[i] != b.data[i]) return false;
          }
       }
-      return res;
+      return true;
    }
 };
