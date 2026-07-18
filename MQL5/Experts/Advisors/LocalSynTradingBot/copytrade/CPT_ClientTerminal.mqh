@@ -401,7 +401,7 @@ public:
                 && pendingEv.arg_ulong_2 == closedPos.position_ticket)
             {
                 isCopyTradePositionClosed = true;
-                pendingEv.state = Event::EVS_DONE;
+                pendingEv.state = Event::EVS_WAIITING_SUCCESS;
             }
         }
 
