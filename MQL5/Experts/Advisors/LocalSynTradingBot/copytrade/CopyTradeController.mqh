@@ -3,6 +3,8 @@
 #include "../common/Types.mqh"
 #include "../common/Constants.mqh"
 #include "../common/CommonDatacenter.mqh"
+#include "../queue/EventQueue.mqh"
+#include "../queue/PendingEventList.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_ServerTerminal.mqh"
 #include "CPT_ClientTerminal.mqh"
@@ -86,6 +88,8 @@ public:
         m_MyTerminal.DoPoll();
 #endif
         m_MyTerminal.OnTimer();
+        PendingEventList::GetInstance().Execute();
+        EventQueue::GetInstance().Execute();
     }
 
 /**********************************************************************************
