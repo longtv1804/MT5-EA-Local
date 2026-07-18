@@ -17,7 +17,10 @@ protected:
 *
 ***********************************************************************************/
 public:
-    CPT_LocalTerminal() : m_pInOutManager(NULL) {}
+    CPT_LocalTerminal() 
+    : Handler(),
+    m_pInOutManager(NULL)
+    {}
 
     ~CPT_LocalTerminal() {}
 

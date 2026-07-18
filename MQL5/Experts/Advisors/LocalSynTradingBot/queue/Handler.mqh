@@ -2,10 +2,14 @@
 #include "HandlerInterface.mqh"
 #include "EventQueue.mqh"
 #include "PendingEventList.mqh"
+#include "../common/Logging.mqh"
 
 class Handler : public iHandler
 {
 public:
+    Handler() : iHandler()
+    {}
+
     Event ObtainEvent(const int eid, Handler* handler)
     {
         Event ev;
@@ -18,7 +22,7 @@ public:
     {
         Event ev;
         ev.eventId = eid;
-        ev.handler = this;
+        ev.handler = &this;
         return ev;
     }
 
