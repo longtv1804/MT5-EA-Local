@@ -70,7 +70,7 @@ public:
     {
         if (idx < 0 || idx >= mSize) return false;
 
-        for(int i = index; i < mSize - 1; i++)
+        for(int i = idx; i < mSize - 1; i++)
         {
             mList[i] = mList[i + 1];
         }
@@ -116,5 +116,10 @@ public:
             return NULL;
         }
         return &mList[index];
+    }
+
+    T Get(int index) const
+    {
+        return mList[index];
     }
 };
