@@ -405,21 +405,21 @@ public:
     #endif
     }
 
-    static bool DoCopyTrade_OpendPosition(CopyTradeEvent &ev)
+    static bool DoCopyTrade_OpendPosition(CopyTradeReqData &reqInfo)
     {
         bool res = false;
         // generate pseudo unique magic number
-        ev.tracking_number = ((ulong)MathRand() << 16) | (ulong)MathRand();
+        reqInfo.tracking_number = ((ulong)MathRand() << 16) | (ulong)MathRand();
     #ifdef __MQL5__
         CTrade trade;
-        trade.SetExpertMagicNumber(ev.tracking_number);
-        if (ev.position_type == ePOSITION_TYPE_BUY)
+        trade.SetExpertMagicNumber(reqInfo.tracking_number);
+        if (reqInfo.position_type == ePOSITION_TYPE_BUY)
         {
-            res = trade.Buy(ev.volume);
+            res = trade.Buy(reqInfo.volume);
         }
-        else if (ev.position_type == ePOSITION_TYPE_SELL)
+        else if (reqInfo.position_type == ePOSITION_TYPE_SELL)
         {
-            res = trade.Sell(ev.volume);
+            res = trade.Sell(reqInfo.volume);
         }
         else
         {
@@ -437,15 +437,15 @@ public:
     #else // MQL4
         RefreshRates();
         int ticket = 0;
-        if (ev.position_type == ePOSITION_TYPE_BUY)
+        if (reqInfo.position_type == ePOSITION_TYPE_BUY)
         {
-            ticket = OrderSend(Symbol(), OP_BUY, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
-                        "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
+            ticket = OrderSend(Symbol(), OP_BUY, reqInfo.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
+                        "CopyTrade", (int)reqInfo.tracking_number, 0, clrBlue);
         }
-        else if (ev.position_type == ePOSITION_TYPE_SELL)
+        else if (reqInfo.position_type == ePOSITION_TYPE_SELL)
         {
-            ticket = OrderSend(Symbol(), OP_SELL, ev.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
-                        "CopyTrade", (int)ev.tracking_number, 0, clrBlue);
+            ticket = OrderSend(Symbol(), OP_SELL, reqInfo.volume, Ask, 5/*slippage*/, 0/*stoploss*/, 0/*takeprofit*/,
+                        "CopyTrade", (int)reqInfo.tracking_number, 0, clrBlue);
         }
         else
         {
@@ -465,9 +465,9 @@ public:
         return res;
     }
 
-    static bool DoCopyTrade_ClosePosition(CopyTradeEvent &ev)
+    static bool DoCopyTrade_ClosePosition(CopyTradeReqData &reqInfo)
     {
-        ulong ticket = ev.target_ticket;
+        ulong ticket = reqInfo.target_ticket;
         if (ticket == 0)
         {
             LOGD("ticket is 0");

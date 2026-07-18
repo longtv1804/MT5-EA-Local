@@ -117,17 +117,14 @@ string ToString(EnumCopyTradeMode mode)
 	}
 }
 
-string ToString(const CopyTradeEvent &ev)
+string ToString(const CopyTradeReqData &reqData)
 {
-	return StringFormat("{id=%d, status:%d, Type:%d, retry_count:%d, server_ticket:%I64u, volume:%.3f, target_ticket:%I64u, tracking_number:%d}",
-		ev.eventId,
-		ev.status,
-		ev.position_type,
-		ev.retry_count,
-		ev.server_ticket,
-		ev.volume,
-		ev.target_ticket,
-		ev.tracking_number
+	return StringFormat("{Type:%d, server_ticket:%I64u, volume:%.3f, target_ticket:%I64u, tracking_number:%d}",
+		reqData.position_type,
+		reqData.server_ticket,
+		reqData.volume,
+		reqData.target_ticket,
+		reqData.tracking_number
 	);	
 }
 
