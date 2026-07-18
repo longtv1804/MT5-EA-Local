@@ -3,9 +3,10 @@
 #include "../common/CommonDatacenter.mqh"
 #include "../common/Types.mqh"
 #include "../common/Utils.mqh"
+#include "../queue/Handler.mqh"
 #include "CPT_InOutManager.mqh"
 
-class CPT_LocalTerminal
+class CPT_LocalTerminal : public Handler
 {
 protected:
     CPT_InOutManager *m_pInOutManager;
@@ -56,4 +57,13 @@ public:
     virtual void SetRpEnable(bool isEnable) {}
     virtual void SetRpPlan(int rp_plan) {}
     virtual void SetRpThresholds(double slThreshold, double tpThreshold) {}
+
+/**********************************************************************************
+*
+*  for handler
+*
+***********************************************************************************/
+public:
+    virtual void HandleEvent(const Event &ev) override {}
+    virtual void HandlePendingEventDone(const Event &ev) override {}
 };

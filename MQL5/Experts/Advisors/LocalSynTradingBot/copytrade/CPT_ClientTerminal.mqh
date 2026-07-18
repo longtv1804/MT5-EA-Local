@@ -2,6 +2,8 @@
 #include "../common/Utils.mqh"
 #include "../common/Logging.mqh"
 #include "../common/TradeUtils.mqh"
+#include "../queue/Event.mqh"
+#include "../queue/EventUtils.mqh"
 #include "CPT_LocalTerminal.mqh"
 #include "CPT_CopyTradeSession.mqh"
 #include "CPT_Strategy.mqh"
@@ -14,242 +16,158 @@ private:
 
     /**********************************************************************************
     *
-    *   Event Queue
-    *   queue xử lý copy trade event và các hàm quản lý queue
+    *   Event
+    *   and functions for handle events
     *
     ***********************************************************************************/
     enum EnumCopyTradeEvent
     {
         EV_ADD_NEW_POSITION = 1,
-        EV_CLOSED_POSITION = 2,
-        EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE = 3,
+        EV_ADD_NEW_POSITION_DONE,
+        EV_CLOSED_POSITION,
+        EV_CLOSED_POSITION_DONE,
+        EV_PENDING_CLOSE_NOT_ADDED_POSITION,
+        EV_PENDING_WAITING_NEW_POSITION,
+        EV_PENDING_WAITING_CLOSE_POSITION
     };
-    CopyTradeEvent mCopyTradeEventQueue[];
 
-    bool HandleEvent(CopyTradeEvent& ev)
+    /*------------------EV_ADD_NEW_POSITION--------------------------*/
+    /*                  EV_ADD_NEW_POSITION_DONE                     */
+    void DoCopyTrade_OpendPosition(const Event &ev)
     {
-        if(ev.status != EVS_QUEUED)
+        CopyTradeReqData reqData = EventUtils::ToCopyTradeReqData(ev);
+        bool res = TerminalAPI::DoCopyTrade_OpendPosition(reqData);
+        if (res == true)
         {
-            LOGE("Event is in wrong state " + ToString(ev));
-            return false;
+            Event pendingEv = ObtainEvent(EV_PENDING_WAITING_NEW_POSITION);
+            pendingEv.arg_ulong_1 = reqData.server_ticket;
+            pendingEv.arg_ulong_2 = reqData.tracking_number;
+            SendPendingEvent(pendingEv);
         }
-        bool res = false;
+    }
+    void OnCopyTrade_OpendPositionDone(const Event &ev)
+    {
+        mSession.AddCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+    }
+
+    /*------------------EV_CLOSED_POSITION--------------------------*/
+    /*                  EV_CLOSED_POSITIOND_DONE                    */
+    void DoCopyTrade_ClosePosition(const Event &ev)
+    {
+        CopyTradeReqData reqData = {0};
+        reqData.server_ticket = ev.arg_ulong_1;
+        reqData.target_ticket = ev.arg_ulong_2;
+        bool res = TerminalAPI::DoCopyTrade_ClosePosition(reqData);
+        if (res == true)
+        {
+            Event pendingEv = ObtainEvent(EV_PENDING_WAITING_CLOSE_POSITION);
+            pendingEv.arg_ulong_1 = ev.arg_ulong_1;
+            pendingEv.arg_ulong_2 = ev.arg_ulong_2;
+            SendPendingEvent(pendingEv);
+        }
+    }
+    void OnCopyTrade_ClosePositionDone(const Event &ev)
+    {
+        mSession.RemoveCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+    }
+
+    /**********************************************************************************
+    *
+    *   Pending Events
+    *   and functions for handle Pending Events
+    *
+    ***********************************************************************************/
+
+    /*--------------EV_PENDING_CLOSE_NOT_ADDED_POSITION----------*/
+    void OnCopyTrade_WaitingCloseNotAddedPosDone(const Event &pendingEv)
+    {
+        Event ev = ObtainEvent(EV_CLOSED_POSITION);
+        ev.arg_ulong_1 = pendingEv.arg_ulong_1;
+        ev.arg_ulong_2 = pendingEv.arg_ulong_2;
+        SendEvent(ev);
+    }
+
+    /*----------------EV_PENDING_WAITING_NEW_POSITION------------*/
+    void OnCopyTrade_WaitingNewPosDone(const Event &pendingEv)
+    {
+        Event ev = ObtainEvent(EV_ADD_NEW_POSITION_DONE);
+        ev.arg_ulong_1 = pendingEv.arg_ulong_1;     // server-ticket
+        ev.arg_ulong_2 = pendingEv.arg_ulong_2;     // client new ticket
+        SendEvent(ev);
+    }
+
+    /*----------------EV_PENDING_WAITING_CLOSE_POSITION-----------*/
+    void OnCopyTrade_WaitingClosePosDone(const Event &pendingEv)
+    {
+        Event ev = ObtainEvent(EV_CLOSED_POSITION_DONE);
+        ev.arg_ulong_1 = pendingEv.arg_ulong_1;     // server-ticket
+        ev.arg_ulong_2 = pendingEv.arg_ulong_2;     // client new ticket
+        SendEvent(ev);
+    }
+
+    /**********************************************************************************
+    *
+    *   HandleEvent
+    *   HandlePendingEventDone
+    *
+    ***********************************************************************************/
+
+    void HandleEvent(const Event &ev) override
+    {
+        if(ev.state != Event::EVS_DISPATCHING)
+        {
+            LOGE("Event is in wrong state " + (string)ev.eventId + " " + (string)ev.state);
+            return;
+        }
+        LOGD("execute EventId=" + (string)ev.eventId);
         switch (ev.eventId)
         {
             case EV_ADD_NEW_POSITION:
-            {
-                LOGD("execute EV_ADD_NEW_POSITION");
-                res = TerminalAPI::DoCopyTrade_OpendPosition(ev);
+                LOGD("EV_ADD_NEW_POSITION");
+                DoCopyTrade_OpendPosition(ev);
                 break;
-            }
+            case EV_ADD_NEW_POSITION_DONE:
+                LOGD("EV_ADD_NEW_POSITION_DONE");
+                OnCopyTrade_OpendPositionDone(ev);
+                break;
             case EV_CLOSED_POSITION:
-            {
-                LOGD("execute EV_CLOSED_POSITION");
-                res = TerminalAPI::DoCopyTrade_ClosePosition(ev);
+                LOGD("EV_CLOSED_POSITION");
+                DoCopyTrade_ClosePosition(ev);
                 break;
-            }
-            case EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE:
-            {
-                LOGD("execute EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE");
-                ulong target_ticket = mSession.GetClientTicket(ev.server_ticket);
-                if (target_ticket != 0)
-                {
-                    LOGD("switch EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE->EV_CLOSED_POSITION: target=" + (string)target_ticket);
-                    ev.eventId = EV_CLOSED_POSITION;
-                    ev.target_ticket = target_ticket;
-                    res = TerminalAPI::DoCopyTrade_ClosePosition(ev);
-                }
-                else
-                {
-                    LOGD("seem to be add new event failed, drop CLOSE event. sv-ticket:" + (string)ev.server_ticket);
-                    ev.status = EVS_DROP;
-                }
+            case EV_CLOSED_POSITION_DONE:
+                LOGD("EV_CLOSED_POSITION_DONE");
+                OnCopyTrade_ClosePositionDone(ev);
                 break;
-            }
             default:
-                LOGE("ERROR event id=" + (string)ev.eventId);
-                ev.status = EVS_DROP; // gán EVS_DROP để ignore event và next cái mới
+                LOGE("Unhandle eventId = " + (string)ev.eventId);
                 break;
         }
-        return res;
     }
 
-    void HandleEventDone(CopyTradeEvent& ev)
+    void HandlePendingEventDone(const Event &pendingEv) override
     {
-        if(ev.status != EVS_DONE)
+        if(pendingEv.state != Event::EVS_WAIITING_SUCCESS)
         {
-            LOGE("Event is in wrong state " + ToString(ev));
+            LOGD("Event is NOT SUCCESSED: id=" + (string)pendingEv.eventId + " state=" + (string)pendingEv.state);
             return;
         }
-        switch (ev.eventId)
+        switch (pendingEv.eventId)
         {
-            case EV_ADD_NEW_POSITION:
-            {
-                LOGD("ADD_NEW_POSITION done: server:" + (string)ev.server_ticket + " client:" + (string)ev.target_ticket);
-                mSession.AddCopyTradePosition(ev.server_ticket, ev.target_ticket);
+            case EV_PENDING_CLOSE_NOT_ADDED_POSITION:
+                LOGD("EV_PENDING_CLOSE_NOT_ADDED_POSITION server-ticket=" + (string)pendingEv.arg_ulong_1 + " target-ticket=" +  (string)pendingEv.arg_ulong_2);
+                OnCopyTrade_WaitingCloseNotAddedPosDone(pendingEv);
                 break;
-            }
-            case EV_CLOSED_POSITION:
-            {
-                LOGD("CLOSED_POSITION done: client:" + (string)ev.target_ticket);
-                mSession.RemoveCopyTradePosition(ev.server_ticket, ev.target_ticket);
+            case EV_PENDING_WAITING_NEW_POSITION:
+                LOGD("EV_PENDING_WAITING_NEW_POSITION server-ticket=" + (string)pendingEv.arg_ulong_1 + " new-ticket=" +  (string)pendingEv.arg_ulong_2);
+                OnCopyTrade_WaitingNewPosDone(pendingEv);
                 break;
-            }
-            case EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE:
-            {
-                LOGD("EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE done");
+            case EV_PENDING_WAITING_CLOSE_POSITION:
+                OnCopyTrade_WaitingClosePosDone(pendingEv);
                 break;
-            }
             default:
-                LOGE("ERROR event id=" + (string)ev.eventId);
+                LOGE("Unhandle eventId = " + (string)pendingEv.eventId);
                 break;
         }
-    }
-
-    void Execute()
-    {
-        if (ArraySize(mCopyTradeEventQueue) == 0)
-        {
-            return;
-        }
-
-        // xử lý event:
-        //      + nếu event xử lý ok -> chuyển state PROCESSING
-        //      + nếu evnet xử lý failse -> chuyển state FAILED để retry hoặc next ev khác nếu nó bị DROP
-        if (mCopyTradeEventQueue[0].status == EVS_QUEUED)
-        {
-            bool res = HandleEvent(mCopyTradeEventQueue[0]);
-            if (res) {
-                mCopyTradeEventQueue[0].status = EVS_PROCESSING;
-                mCopyTradeEventQueue[0].time_out = 0;
-            }
-            else
-            {
-                if (mCopyTradeEventQueue[0].status == EVS_DROP) {
-                    // do nothing
-                } else {
-                    mCopyTradeEventQueue[0].status = EVS_FAILED;
-                }
-            }
-            Execute();
-        }
-        // check timeout
-        else if (mCopyTradeEventQueue[0].status == EVS_PROCESSING)
-        {
-            const int TIME_OUT = 5;
-            // chờ timeout 3s
-            if (mCopyTradeEventQueue[0].time_out < TIME_OUT)
-            {
-                mCopyTradeEventQueue[0].time_out++;
-            }
-            // timeout -> set state failed.
-            else
-            {
-                mCopyTradeEventQueue[0].status = EVS_FAILED;
-                Execute();
-            }
-        }
-        // retry
-        else if (mCopyTradeEventQueue[0].status == EVS_FAILED)
-        {
-            const int MAX_RETRY = 3;
-            if (mCopyTradeEventQueue[0].retry_count < MAX_RETRY)
-            {
-                mCopyTradeEventQueue[0].retry_count++;
-                mCopyTradeEventQueue[0].status = EVS_QUEUED;
-            }
-            else
-            {
-                mCopyTradeEventQueue[0].status = EVS_DROP;
-                if (mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
-                {
-                    mSession.AddCopyTradePosition(mCopyTradeEventQueue[0].server_ticket, 0);
-                }
-                else if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION)
-                {
-                    TerminalAPI::SendEmail("ClosePosition " + (string)mCopyTradeEventQueue[0].target_ticket + "FAILED",
-                        "close position failed, ticket=" + (string)mCopyTradeEventQueue[0].target_ticket + 
-                        " server-ticket=" + (string)mCopyTradeEventQueue[0].server_ticket);
-                }
-            }
-            Execute();
-        }
-        // update session sau đó pop event
-        else if (mCopyTradeEventQueue[0].status == EVS_DONE)
-        {
-            HandleEventDone(mCopyTradeEventQueue[0]);
-            PopCopyTradeEvent();
-        }
-        // pop event
-        else if (mCopyTradeEventQueue[0].status == EVS_DROP)
-        {
-            PopCopyTradeEvent();
-        }
-        else
-        {
-            LOGE("ERROR: wrong event state: " + (string)mCopyTradeEventQueue[0].status);
-        }
-    }
-
-    void AddCopytradeEvent(CopyTradeEvent &ev)
-    {
-        int size = ArraySize(mCopyTradeEventQueue);
-        ArrayResize(mCopyTradeEventQueue, size + 1);
-        mCopyTradeEventQueue[size] = ev;
-        mCopyTradeEventQueue[size].status = EVS_QUEUED;
-        LOGD("event=" + ToString(ev));
-        if (size == 0)
-        {
-            Execute();
-        }
-    }
-
-    void PopCopyTradeEvent()
-    {
-        int size = ArraySize(mCopyTradeEventQueue);
-        if(size > 0)
-        {
-            for(int i = 1; i < size; i++)
-            {
-                mCopyTradeEventQueue[i - 1] = mCopyTradeEventQueue[i];
-            }
-
-            ArrayResize(mCopyTradeEventQueue, size - 1);
-            if (size - 1 > 0)
-            {
-                Execute();
-            }
-        }
-    }
-
-    bool HasPendingEvent(int event_id, ulong server_ticket)
-    {
-        int size = ArraySize(mCopyTradeEventQueue);
-        for (int i = 0; i < size; i++)
-        {
-            if (mCopyTradeEventQueue[i].eventId == event_id &&
-                mCopyTradeEventQueue[i].server_ticket == server_ticket)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool TryIgnoreEvent(int event_id, ulong server_ticket)
-    {
-        int size = ArraySize(mCopyTradeEventQueue);
-        for (int i = 1; i < size; i++)
-        {
-            if (mCopyTradeEventQueue[i].eventId == event_id &&
-                mCopyTradeEventQueue[i].server_ticket == server_ticket && 
-                mCopyTradeEventQueue[i].status == EVS_QUEUED)
-            {
-                mCopyTradeEventQueue[i].status = EVS_DROP;
-                return true;
-            }
-        }
-        return false;
     }
 
     /**********************************************************************************
@@ -332,13 +250,6 @@ public:
         LOGD("terminate ClientTerminal...");
         int copyTradePosNum = mSession.GetCptPositionNumber();
         mSession.SaveSession();
-
-        // check event queue: logging out
-        int size = ArraySize(mCopyTradeEventQueue);
-        for (int i = 0; i < size; i++)
-        {
-            LOGD("Event Queue is not Emplty: " + ToString(mCopyTradeEventQueue[i]));
-        }
 
         if (mBuyStrategy)
         {
@@ -443,21 +354,30 @@ public:
     ***********************************************************************************/
     void OnPositionAdded(iPosition& newPos) override
     {
-        int queue_size = ArraySize(mCopyTradeEventQueue);
+        int queue_size = PendingEventList::GetInstance().Size();
 
-        // sau khi position added: cần check lại và update event thành DONE
+        // sau khi position added: cần check lại PendingList và update event thành SUCCESS
         bool isCopyTradePositionAdded = false;
-        if (queue_size > 0 && mCopyTradeEventQueue[0].eventId == EV_ADD_NEW_POSITION)
+        for (int i = 0; i < queue_size; i++)
         {
-            if (mCopyTradeEventQueue[0].tracking_number == newPos.magic_number)
+            Event* ev = PendingEventList::GetInstance().At(i);
+
+            if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_WAITING_NEW_POSITION
+                && ev.arg_ulong_2 == newPos.magic_number)
             {
                 isCopyTradePositionAdded = true;
-                mCopyTradeEventQueue[0].status = EVS_DONE;
-                mCopyTradeEventQueue[0].target_ticket = newPos.position_ticket;
+                ev.state = Event::EVS_WAIITING_SUCCESS;
+                ev.arg_ulong_2 = newPos.position_ticket;
                 if (mIsRevertPositionEnable)
                 {
                     Rp_OnPositionAdded(newPos);
                 }
+            }
+            else if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_CLOSE_NOT_ADDED_POSITION
+                    && ev.arg_ulong_2 == newPos.magic_number)
+            {
+                ev.state = Event::EVS_WAIITING_SUCCESS;
+                ev.arg_ulong_2 = newPos.position_ticket;
             }
         }
 
@@ -470,32 +390,18 @@ public:
 
     void OnPositionClosed(iPosition& closedPos) override
     {
-        int queue_size = ArraySize(mCopyTradeEventQueue);
-
+        // check lại PendingList và update event thành SUCCESS
+        int queue_size = PendingEventList::GetInstance().Size();
         bool isCopyTradePositionClosed = false;
-        if (queue_size > 0)
+        for (int i = 0; i < queue_size; i++)
         {
-            // sau khi position closed, cần check lại và update event thành DONE
-            if (mCopyTradeEventQueue[0].eventId == EV_CLOSED_POSITION &&
-                mCopyTradeEventQueue[0].target_ticket == closedPos.position_ticket)
+            Event* pendingEv = PendingEventList::GetInstance().At(i);
+
+            if (pendingEv.state == Event::EVS_WAITING && pendingEv.eventId == EV_PENDING_WAITING_CLOSE_POSITION
+                && pendingEv.arg_ulong_2 == closedPos.position_ticket)
             {
                 isCopyTradePositionClosed = true;
-                mCopyTradeEventQueue[0].status = EVS_DONE;
-            }
-            // set EVS_DROP cho queue-event khi ticket là target-ticket và event chưa dc process
-            else
-            {
-                for (int i = 1; i < queue_size; i++)
-                {
-                    if (mCopyTradeEventQueue[i].eventId == EV_CLOSED_POSITION &&
-                        mCopyTradeEventQueue[i].target_ticket == closedPos.position_ticket)
-                    {
-                        LOGD("DROP queue-event because target-ticket(" + (string)closedPos.position_ticket
-                                + ") is closed before the event is processed ");
-                        mCopyTradeEventQueue[i].status = EVS_DROP;
-                        break;
-                    }
-                }
+                pendingEv.state = Event::EVS_DONE;
             }
         }
 
@@ -692,13 +598,14 @@ private:
             if (isExisted == true)
             {
                 LOGD("Process closed position [" + (string)server_ticket + ", " + (string)client_ticket + "]");
-                CopyTradeEvent ev = {0};
-                ev.eventId = EV_CLOSED_POSITION;
-                ev.server_ticket = server_ticket;
-                ev.volume = now_client_positions[j].volume;
-                ev.position_type = now_client_positions[j].position_type;
-                ev.target_ticket = client_ticket;
-                AddCopytradeEvent(ev);
+                CopyTradeReqData evData = {0};
+                evData.server_ticket = server_ticket;
+                evData.volume = now_client_positions[j].volume;
+                evData.position_type = now_client_positions[j].position_type;
+                evData.target_ticket = client_ticket;
+                Event ev = ObtainEvent(EV_CLOSED_POSITION);
+                EventUtils::ToData(ev, evData);
+                SendEvent(ev);
             }
             else
             {
@@ -721,9 +628,6 @@ private:
 public:
     void DoPoll() override
     {
-        // execute events trước khi thực hiện polling data
-        Execute();
-
         // bắt đầu polling data
         bool isInputExisted = m_pInOutManager.CheckInputFile();
         string cmdList[];
@@ -877,20 +781,20 @@ private:
             LOGE("server-ticket is already in the trading map: " + (string)newPos.position_ticket);
             return;
         }
-        CopyTradeEvent ev = {0};
-        ev.eventId = EV_ADD_NEW_POSITION;
-        ev.server_ticket = newPos.position_ticket;
+
+        CopyTradeReqData reqData = {0};
+        reqData.server_ticket = newPos.position_ticket;
         if (mIsRevertPositionEnable == true)
         {
             if (newPos.position_type == ePOSITION_TYPE_BUY)
             {
-                ev.position_type = ePOSITION_TYPE_SELL;
-                ev.volume = mSellStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
+                reqData.position_type = ePOSITION_TYPE_SELL;
+                reqData.volume = mSellStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
             }
             else if (newPos.position_type == ePOSITION_TYPE_SELL)
             {
-                ev.position_type = ePOSITION_TYPE_BUY;
-                ev.volume = mBuyStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
+                reqData.position_type = ePOSITION_TYPE_BUY;
+                reqData.volume = mBuyStrategy.GetNextVolume(newPos.volume, mSession.GetWeight());
             }
             else
             {
@@ -899,10 +803,12 @@ private:
         }
         else
         {
-            ev.position_type = newPos.position_type;
-            ev.volume = TradeUtils::NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
+            reqData.position_type = newPos.position_type;
+            reqData.volume = TradeUtils::NormalizeVolume(_Symbol, newPos.volume * mSession.GetWeight());
         }
-        AddCopytradeEvent(ev);
+        Event ev = ObtainEvent(EV_ADD_NEW_POSITION);
+        EventUtils::ToData(ev, reqData);
+        SendEvent(ev);
     }
 
     void OnServer_PositionClosed(int session, iPosition &closedPos)
@@ -917,37 +823,40 @@ private:
         if (target_ticket == 0)
         {
             // trong trường hợp event add new position chưa xong,
-            // nếu server close positon đó, thì sẽ ko thể tìm thấy target position
-            if (HasPendingEvent(EV_ADD_NEW_POSITION, closedPos.position_ticket) == true)
+            // thì sẽ ko thể tìm thấy target position
+            bool hasPendingAddNewPosEvent = false;
+            int queue_size = PendingEventList::GetInstance().Size();
+            for (int i = 0; i < queue_size; i++)
             {
-                LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);
-                if (TryIgnoreEvent(EV_ADD_NEW_POSITION, closedPos.position_ticket) == true)
+                const Event* ev = PendingEventList::GetInstance().At(i);
+                if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_WAITING_NEW_POSITION
+                    && ev.arg_ulong_1 == closedPos.position_ticket)
                 {
-                    LOGD("ignored the ADD event: sv-ticket:" + (string)closedPos.position_ticket);
-                }
-                else
-                {
-                    CopyTradeEvent ev = {0};
-                    ev.eventId = EV_CLOSED_POSITION_WHEN_ADDPOS_NOT_DONE;
-                    ev.server_ticket = closedPos.position_ticket;
-                    ev.volume = TradeUtils::NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
-                    ev.position_type = closedPos.position_type;
-                    AddCopytradeEvent(ev);
+                    hasPendingAddNewPosEvent = true;
+                    LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);
+                    Event newPendingEv = ObtainEvent(EV_PENDING_CLOSE_NOT_ADDED_POSITION);
+                    newPendingEv.arg_ulong_1 = closedPos.position_ticket;       // set server ticket
+                    newPendingEv.arg_ulong_2 = ev.arg_ulong_2;                  // set magic number
+                    SendPendingEvent(newPendingEv);
+                    break;
                 }
             }
-            else
+
+            // trường hợp ko tìm thấy trong pendingList thì có thể đặt lệnh failed
+            // thử remove trong session
+            if (hasPendingAddNewPosEvent == false)
             {
+                LOGD("the target not found, server-ticket" + (string)closedPos.position_ticket);
                 // thử remove data trong session
                 mSession.RemoveCopyTradePosition(closedPos.position_ticket, 0);
             }
-            return;
         }
-        CopyTradeEvent ev = {0};
-        ev.eventId = EV_CLOSED_POSITION;
-        ev.server_ticket = closedPos.position_ticket;
-        ev.volume = TradeUtils::NormalizeVolume(_Symbol, closedPos.volume * mSession.GetWeight());
-        ev.position_type = closedPos.position_type;
-        ev.target_ticket = target_ticket;
-        AddCopytradeEvent(ev);
+        else
+        {
+            Event ev = ObtainEvent(EV_CLOSED_POSITION);
+            ev.arg_ulong_1 = closedPos.position_ticket;
+            ev.arg_ulong_2 = target_ticket;
+            SendEvent(ev);
+        }
     }
 };
