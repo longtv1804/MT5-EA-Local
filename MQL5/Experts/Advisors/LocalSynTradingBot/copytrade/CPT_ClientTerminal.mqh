@@ -31,6 +31,21 @@ private:
         EV_PENDING_WAITING_CLOSE_POSITION
     };
 
+    static string EventToString(int evid)
+    {
+        switch (evid)
+        {
+            case EV_ADD_NEW_POSITION:       return "EV_ADD_NEW_POSITION";
+            case EV_ADD_NEW_POSITION_DONE:  return "EV_ADD_NEW_POSITION_DONE";
+            case EV_CLOSED_POSITION:        return "EV_CLOSED_POSITION";
+            case EV_CLOSED_POSITION_DONE:   return "EV_CLOSED_POSITION_DONE";
+            case EV_PENDING_CLOSE_NOT_ADDED_POSITION:   return "EV_PENDING_CLOSE_NOT_ADDED_POSITION";
+            case EV_PENDING_WAITING_NEW_POSITION:       return "EV_PENDING_WAITING_NEW_POSITION";
+            case EV_PENDING_WAITING_CLOSE_POSITION:     return "EV_PENDING_WAITING_CLOSE_POSITION";
+            default: return (string) evid;
+        }
+    }
+
     /*------------------EV_ADD_NEW_POSITION--------------------------*/
     /*                  EV_ADD_NEW_POSITION_DONE                     */
     void DoCopyTrade_OpendPosition(const Event &ev)
@@ -81,6 +96,7 @@ private:
     /*--------------EV_PENDING_CLOSE_NOT_ADDED_POSITION----------*/
     void OnCopyTrade_WaitingCloseNotAddedPosDone(const Event &pendingEv)
     {
+        LOGD("server-ticket=" + (string)pendingEv.arg_ulong_1 + " target-ticket=" +  (string)pendingEv.arg_ulong_2);
         Event ev = ObtainEvent(EV_CLOSED_POSITION);
         ev.arg_ulong_1 = pendingEv.arg_ulong_1;
         ev.arg_ulong_2 = pendingEv.arg_ulong_2;
@@ -90,6 +106,7 @@ private:
     /*----------------EV_PENDING_WAITING_NEW_POSITION------------*/
     void OnCopyTrade_WaitingNewPosDone(const Event &pendingEv)
     {
+        LOGD("server-ticket=" + (string)pendingEv.arg_ulong_1 + " new-ticket=" +  (string)pendingEv.arg_ulong_2);
         Event ev = ObtainEvent(EV_ADD_NEW_POSITION_DONE);
         ev.arg_ulong_1 = pendingEv.arg_ulong_1;     // server-ticket
         ev.arg_ulong_2 = pendingEv.arg_ulong_2;     // client new ticket
@@ -119,23 +136,19 @@ private:
             LOGE("Event is in wrong state " + (string)ev.eventId + " " + (string)ev.state);
             return;
         }
-        LOGD("execute EventId=" + (string)ev.eventId);
+        LOGD("EventId=" + EventToString(ev.eventId));
         switch (ev.eventId)
         {
             case EV_ADD_NEW_POSITION:
-                LOGD("EV_ADD_NEW_POSITION");
                 DoCopyTrade_OpendPosition(ev);
                 break;
             case EV_ADD_NEW_POSITION_DONE:
-                LOGD("EV_ADD_NEW_POSITION_DONE");
                 OnCopyTrade_OpendPositionDone(ev);
                 break;
             case EV_CLOSED_POSITION:
-                LOGD("EV_CLOSED_POSITION");
                 DoCopyTrade_ClosePosition(ev);
                 break;
             case EV_CLOSED_POSITION_DONE:
-                LOGD("EV_CLOSED_POSITION_DONE");
                 OnCopyTrade_ClosePositionDone(ev);
                 break;
             default:
@@ -151,14 +164,13 @@ private:
             LOGD("Event is NOT SUCCESSED: id=" + (string)pendingEv.eventId + " state=" + (string)pendingEv.state);
             return;
         }
+        LOGD("EventId=" + EventToString(pendingEv.eventId));
         switch (pendingEv.eventId)
         {
             case EV_PENDING_CLOSE_NOT_ADDED_POSITION:
-                LOGD("EV_PENDING_CLOSE_NOT_ADDED_POSITION server-ticket=" + (string)pendingEv.arg_ulong_1 + " target-ticket=" +  (string)pendingEv.arg_ulong_2);
                 OnCopyTrade_WaitingCloseNotAddedPosDone(pendingEv);
                 break;
             case EV_PENDING_WAITING_NEW_POSITION:
-                LOGD("EV_PENDING_WAITING_NEW_POSITION server-ticket=" + (string)pendingEv.arg_ulong_1 + " new-ticket=" +  (string)pendingEv.arg_ulong_2);
                 OnCopyTrade_WaitingNewPosDone(pendingEv);
                 break;
             case EV_PENDING_WAITING_CLOSE_POSITION:

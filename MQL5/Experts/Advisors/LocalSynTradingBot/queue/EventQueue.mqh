@@ -18,7 +18,7 @@ private:
         mOutIdx = 0;
     }
 
-    static EventQueue *mInstance;
+    static EventQueue mInstance;
 
     const Event* DeQueue()
     {
@@ -34,13 +34,14 @@ private:
     }
 
 public:
+    ~EventQueue()
+    {
+        ArrayResize(mQueue, 0);
+    }
+
     static EventQueue* GetInstance()
     {
-        if (mInstance == NULL)
-        {
-            mInstance = new EventQueue();
-        }
-        return mInstance;
+        return &mInstance;
     }
 
     void Execute()
@@ -124,4 +125,4 @@ public:
     }
 };
 
-EventQueue* EventQueue::mInstance = NULL;
+EventQueue EventQueue::mInstance;

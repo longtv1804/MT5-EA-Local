@@ -6,17 +6,18 @@ class PendingEventList
 {
 private:
     List<Event> mPendingList;
-    static PendingEventList* mIns;
+    static PendingEventList mIns;
     PendingEventList() {}
 
 public:
+    ~PendingEventList()
+    {
+        mPendingList.Clear();
+    }
+
     static PendingEventList* GetInstance()
     {
-        if (mIns == NULL)
-        {
-            mIns = new PendingEventList();
-        }
-        return mIns;
+        return &mIns;
     }
 
     void Execute()
@@ -71,4 +72,4 @@ public:
         return mPendingList.At(idx);
     }
 };
-PendingEventList* PendingEventList::mIns = NULL;
+PendingEventList PendingEventList::mIns;
