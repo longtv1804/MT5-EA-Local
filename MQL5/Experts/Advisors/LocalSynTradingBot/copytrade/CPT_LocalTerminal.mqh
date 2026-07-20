@@ -38,8 +38,8 @@ public:
 *
 ***********************************************************************************/
 public:
-    virtual void OnPositionAdded(iPosition& newPosition) {}
-    virtual void OnPositionClosed(iPosition& newPosition) {}
+    virtual void OnPositionAdded(const iPosition& newPosition) {}
+    virtual void OnPositionClosed(const iPosition& newPosition) {}
 
 /**********************************************************************************
 *

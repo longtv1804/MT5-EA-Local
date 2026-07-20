@@ -15,7 +15,7 @@ public:
 		ArrayFree(mJsonData);
 	}
 
-	void Set(string key, string value)
+	void Set(const string key, const string value)
 	{
 		string text = "\"" + key + "\":" + "\"" + value + "\"";
 		int size = ArraySize(mJsonData);
@@ -38,7 +38,7 @@ public:
 	// 	Set(key, (string)value);
 	// }
 
-	void Set(string key, iPosition& pos)
+	void Set(const string key, const iPosition& pos)
 	{
 		string pos_jstr = ToJson(pos);
 		string text = "\"" + key + "\":" + pos_jstr;
@@ -47,7 +47,7 @@ public:
 		mJsonData[size] = text;
 	}
 
-	void Set(string key, iPosition& arr[])
+	void Set(const string key, const iPosition& arr[])
 	{
 		int size = ArraySize(arr);
 		string jsonData = "[";

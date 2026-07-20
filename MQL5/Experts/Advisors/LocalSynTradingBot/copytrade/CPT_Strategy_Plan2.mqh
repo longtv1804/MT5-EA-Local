@@ -126,7 +126,7 @@ public:
         }
     }
 
-    void OnNewPositionAdded(iPosition& newPos) override
+    void OnNewPositionAdded(const iPosition& newPos) override
     {
         mPositions.Add(newPos);
         mPlanIdx++;
@@ -161,7 +161,7 @@ public:
         }
     }
 
-    void OnPositionClose(iPosition& closedPos) override
+    void OnPositionClose(const iPosition& closedPos) override
     {
         mPositions.Remove(closedPos);
         if (mPositions.Size() == 0)
@@ -182,4 +182,6 @@ public:
             }
         }
     }
+    void HandleEvent(const Event &ev) {}
+    void HandlePendingEventDone(const Event &ev) {}
 };

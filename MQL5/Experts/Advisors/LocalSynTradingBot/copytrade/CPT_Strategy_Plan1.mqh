@@ -16,9 +16,12 @@ public:
     void OnPriceUpdate(double curPrice) override 
     {}
 
-    void OnNewPositionAdded(iPosition& newPos) override
+    void OnNewPositionAdded(const iPosition& newPos) override
     {}
 
-    void OnPositionClose(iPosition& newPos) override 
+    void OnPositionClose(const iPosition& newPos) override 
     {}
+
+    void HandleEvent(const Event &ev) {}
+    void HandlePendingEventDone(const Event &ev) {}
 };

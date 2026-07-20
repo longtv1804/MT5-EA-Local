@@ -6,7 +6,7 @@
 //	ToString functions
 //
 //=======================================================================================
-string ToString(iPosition &info)
+string ToString(const iPosition &info)
 {
 	return StringFormat("[position_ticket:%I64u, Symbol:%s, position_type:%s, Status:%s, volume:%.2f price_open:%.3f ]",
 		info.position_ticket,
@@ -18,7 +18,7 @@ string ToString(iPosition &info)
 	);
 }
 
-string PositionTypeToString(EnumPositionType enumValue)
+string PositionTypeToString(const EnumPositionType enumValue)
 {
 	switch(enumValue)
 	{
@@ -30,7 +30,7 @@ string PositionTypeToString(EnumPositionType enumValue)
 			return "UNKNOWN";
 	}
 }
-string PositionStatusToString(EnumPositionStatus status)
+string PositionStatusToString(const EnumPositionStatus status)
 {
 	switch(status)
 	{
@@ -42,7 +42,7 @@ string PositionStatusToString(EnumPositionStatus status)
 			return "UNKNOWN";
 	}
 }
-string ToString(EnumTerminalType type)
+string ToString(const EnumTerminalType type)
 {
 	switch(type)
 	{
@@ -64,7 +64,7 @@ string ToString(bool val)
 	return val ? "true" : "false";
 }
 
-string ToString(RemoteConnectionState state)
+string ToString(const RemoteConnectionState state)
 {
 	switch(state)
 	{
@@ -104,7 +104,7 @@ EnumCloseReason ConvertCloseReason(const ENUM_DEAL_REASON value)
 }
 #endif
 
-string ToString(EnumCopyTradeMode mode)
+string ToString(const EnumCopyTradeMode mode)
 {
 	switch(mode)
 	{

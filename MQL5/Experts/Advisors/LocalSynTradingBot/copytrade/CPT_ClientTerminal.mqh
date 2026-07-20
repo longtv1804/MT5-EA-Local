@@ -287,7 +287,7 @@ private:
     CPT_Strategy *mBuyStrategy;
     CPT_Strategy *mSellStrategy;
 
-    void Rp_OnPositionAdded(iPosition& newPos)
+    void Rp_OnPositionAdded(const iPosition& newPos)
     {
         switch(newPos.position_type)
         {
@@ -304,7 +304,7 @@ private:
                 break;
         }
     }
-    void Rp_OnPositionClosed(iPosition& closedPos)
+    void Rp_OnPositionClosed(const iPosition& closedPos)
     {
         switch(closedPos.position_type)
         {
@@ -364,7 +364,7 @@ public:
     *   Possions changed
     *
     ***********************************************************************************/
-    void OnPositionAdded(iPosition& newPos) override
+    void OnPositionAdded(const iPosition& newPos) override
     {
         int queue_size = PendingEventList::GetInstance().Size();
 
@@ -400,7 +400,7 @@ public:
         }
     }
 
-    void OnPositionClosed(iPosition& closedPos) override
+    void OnPositionClosed(const iPosition& closedPos) override
     {
         // check lại PendingList và update event thành SUCCESS
         int queue_size = PendingEventList::GetInstance().Size();

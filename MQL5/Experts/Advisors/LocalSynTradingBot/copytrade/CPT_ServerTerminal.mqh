@@ -205,7 +205,7 @@ private:
         m_pInOutManager.SendData(builder.Build());
     }
 
-    void OnPositionAdded(iPosition& newPos)
+    void OnPositionAdded(const iPosition& newPos) override
     {
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_ADDED);
@@ -215,7 +215,7 @@ private:
         m_pInOutManager.SendData(builder.Build());
     }
 
-    void OnPositionClosed(iPosition& closedPos)
+    void OnPositionClosed(const iPosition& closedPos) override
     {
         JsonBuilder builder;
         builder.Set("cmd", (string)eCMD_CPT_POS_CLOSED);
