@@ -782,7 +782,7 @@ private:
 
     void OnServer_NewPositionAdded(int session, iPosition &newPos)
     {
-        LOGD("session: " + (string)session + " " + ToString(newPos));
+        LOGD(">>> " + (string)session + " " + ToString(newPos));
         if (session != mSession.GetSessionId())
         {
             LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
@@ -825,7 +825,7 @@ private:
 
     void OnServer_PositionClosed(int session, iPosition &closedPos)
     {
-        LOGD("session: " + (string)session + " " + ToString(closedPos));
+        LOGD(">>> " + (string)session + " " + ToString(closedPos));
         if (session != mSession.GetSessionId())
         {
             LOGE("ERROR: server-session: " + (string)session + " my-session: " + (string)mSession.GetSessionId());
@@ -840,16 +840,28 @@ private:
             int queue_size = PendingEventList::GetInstance().Size();
             for (int i = 0; i < queue_size; i++)
             {
-                const Event* ev = PendingEventList::GetInstance().At(i);
-                if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_WAITING_NEW_POSITION
-                    && ev.arg_ulong_1 == closedPos.position_ticket)
+                const Event* pendingEv = PendingEventList::GetInstance().At(i);
+                if (pendingEv.eventId == EV_PENDING_WAITING_NEW_POSITION
+                    && pendingEv.arg_ulong_1 == closedPos.position_ticket)
                 {
-                    hasPendingAddNewPosEvent = true;
-                    LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);
-                    Event newPendingEv = ObtainEvent(EV_PENDING_CLOSE_NOT_ADDED_POSITION);
-                    newPendingEv.arg_ulong_1 = closedPos.position_ticket;       // set server ticket
-                    newPendingEv.arg_ulong_2 = ev.arg_ulong_2;                  // set magic number
-                    SendPendingEvent(newPendingEv);
+                    if (pendingEv.state == Event::EVS_WAITING || pendingEv.state == Event::EVS_WAIITING_SUCCESS)
+                    {
+                        hasPendingAddNewPosEvent = true;
+                        LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);
+                        Event newPendingEv = ObtainEvent(EV_PENDING_CLOSE_NOT_ADDED_POSITION);
+                        newPendingEv.arg_ulong_1 = closedPos.position_ticket;       // set server ticket
+                        newPendingEv.arg_ulong_2 = pendingEv.arg_ulong_2;           // set magic number
+                        SendPendingEvent(newPendingEv);
+                        
+                        // trong trường hợp WAITING_NEW_POSITION đang ở state WAITING: thì addedPeningEv cũng phải để là WAITING
+                        //                                                    SUCCESS: thì addedPeningEv cũng phải để là SUCCESS
+                        Event *addedPeningEv = PendingEventList::GetInstance().At(PendingEventList::GetInstance().Size() - 1);
+                        addedPeningEv.state = pendingEv.state;
+                    }
+                    else
+                    {
+                        LOGD("ignore close pos for server-ticket[" + (string)closedPos.position_ticket + "] state=" + (string)pendingEv.state);
+                    }
                     break;
                 }
             }
