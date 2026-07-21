@@ -192,7 +192,7 @@ string GetJsonString(const string json, const string key)
 // Static function: Parse a single JSON object to iPosition
 iPosition ParseJsonToPosition(const string jsonObj)
 {
-	iPosition info = {0};
+	iPosition info;
 	int fpos;
 	fpos = StringFind(jsonObj, "\"position_ticket\":");
 	if(fpos>=0) info.position_ticket = StringToInteger(GetJsonValue(jsonObj, "position_ticket"));

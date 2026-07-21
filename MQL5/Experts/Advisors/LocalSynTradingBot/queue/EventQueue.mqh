@@ -54,12 +54,12 @@ public:
         while (ev != NULL)
         {
             Event cpyEv = ev;
-            if (cpyEv.state == Event::EVS_QUEUED)
+            if (cpyEv.state == EnumEventState::EVS_QUEUED)
             {
-                cpyEv.state = Event::EVS_DISPATCHING;
+                cpyEv.state = EnumEventState::EVS_DISPATCHING;
                 cpyEv.handler.HandleEvent(cpyEv);
             }
-            else if (cpyEv.state == Event::EVS_DROP)
+            else if (cpyEv.state == EnumEventState::EVS_DROP)
             {
                 // ignore this event.
             }
@@ -83,7 +83,7 @@ public:
             }
         }
         mQueue[mInIdx] = ev;
-        mQueue[mInIdx].state = Event::EVS_QUEUED;
+        mQueue[mInIdx].state = EnumEventState::EVS_QUEUED;
         mInIdx++;
         if (mInIdx - mOutIdx == 1)
         {
@@ -117,7 +117,7 @@ public:
         {
             if (mQueue[i].eventId == event_id && mQueue[i].handler == handler)
             {
-                mQueue[i].state = Event::EVS_DROP;
+                mQueue[i].state = EnumEventState::EVS_DROP;
                 return true;
             }
         }

@@ -79,15 +79,17 @@ public:
     {
         if (mPlanIdx == 0 || mPositions.Size() == 0 || mStopLostPrice == 0.0)
             return;
+        int i = 0;
+        iPosition *pos = NULL;
         if (mType == ePOSITION_TYPE_BUY)
         {
             // check stoplost: nếu giá giảm/tăng tới mStopLostPrice thì close strategy
             if (curPrice <= mStopLostPrice || TradeUtils::IsSamePrice(curPrice , mStopLostPrice))
             {
                 LOGD("Strategy[" + PositionTypeToString(mType) + "] STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
-                for(int i = 0; i < mPositions.Size(); i++)
+                for(i = 0; i < mPositions.Size(); i++)
                 {
-                    const iPosition *pos = mPositions.At(i);
+                    pos = mPositions.At(i);
                     TerminalAPI::DoClosePosition(pos.position_ticket);
                 }
             }
@@ -105,9 +107,9 @@ public:
             if (curPrice >= mStopLostPrice || TradeUtils::IsSamePrice(curPrice , mStopLostPrice))
             {
                 LOGD("Strategy[" + PositionTypeToString(mType) + "] STOPLOST detected: curPrice=" + (string)curPrice + " SL=" + (string)mStopLostPrice);
-                for(int i = 0; i < mPositions.Size(); i++)
+                for(i = 0; i < mPositions.Size(); i++)
                 {
-                    const iPosition *pos = mPositions.At(i);
+                    pos = mPositions.At(i);
                     TerminalAPI::DoClosePosition(pos.position_ticket);
                 }
             }

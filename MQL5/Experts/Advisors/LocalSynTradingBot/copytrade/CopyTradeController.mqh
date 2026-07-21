@@ -83,14 +83,7 @@ public:
 
     void OnTimer()
     {
-        // MQL5 có support OnTradeTransaction để detect position changed
-        // MQL4 ko hỗ trợ, nên phải detect sự thay đổi của position theo từng timer.
-#ifdef __MQL5__
         m_MyTerminal.DoPoll();
-#else
-        CheckLocalPositionChanged();
-        m_MyTerminal.DoPoll();
-#endif
         m_MyTerminal.OnTimer();
         PendingEventList::GetInstance().Execute();
         EventQueue::GetInstance().Execute();

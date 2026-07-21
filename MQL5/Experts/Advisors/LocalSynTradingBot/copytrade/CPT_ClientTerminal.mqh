@@ -131,7 +131,7 @@ private:
 
     void HandleEvent(const Event &ev) override
     {
-        if(ev.state != Event::EVS_DISPATCHING)
+        if(ev.state != EnumEventState::EVS_DISPATCHING)
         {
             LOGE("Event is in wrong state " + (string)ev.eventId + " " + (string)ev.state);
             return;
@@ -159,7 +159,7 @@ private:
 
     void HandlePendingEventDone(const Event &pendingEv) override
     {
-        if(pendingEv.state != Event::EVS_WAIITING_SUCCESS)
+        if(pendingEv.state != EnumEventState::EVS_WAIITING_SUCCESS)
         {
             LOGD("Event is NOT SUCCESSED: id=" + (string)pendingEv.eventId + " state=" + (string)pendingEv.state);
             return;
@@ -374,21 +374,21 @@ public:
         {
             Event* ev = PendingEventList::GetInstance().At(i);
 
-            if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_WAITING_NEW_POSITION
+            if (ev.state == EnumEventState::EVS_WAITING && ev.eventId == EV_PENDING_WAITING_NEW_POSITION
                 && ev.arg_ulong_2 == newPos.magic_number)
             {
                 isCopyTradePositionAdded = true;
-                ev.state = Event::EVS_WAIITING_SUCCESS;
+                ev.state = EnumEventState::EVS_WAIITING_SUCCESS;
                 ev.arg_ulong_2 = newPos.position_ticket;
                 if (mIsRevertPositionEnable)
                 {
                     Rp_OnPositionAdded(newPos);
                 }
             }
-            else if (ev.state == Event::EVS_WAITING && ev.eventId == EV_PENDING_CLOSE_NOT_ADDED_POSITION
+            else if (ev.state == EnumEventState::EVS_WAITING && ev.eventId == EV_PENDING_CLOSE_NOT_ADDED_POSITION
                     && ev.arg_ulong_2 == newPos.magic_number)
             {
-                ev.state = Event::EVS_WAIITING_SUCCESS;
+                ev.state = EnumEventState::EVS_WAIITING_SUCCESS;
                 ev.arg_ulong_2 = newPos.position_ticket;
             }
         }
@@ -409,11 +409,11 @@ public:
         {
             Event* pendingEv = PendingEventList::GetInstance().At(i);
 
-            if (pendingEv.state == Event::EVS_WAITING && pendingEv.eventId == EV_PENDING_WAITING_CLOSE_POSITION
+            if (pendingEv.state == EnumEventState::EVS_WAITING && pendingEv.eventId == EV_PENDING_WAITING_CLOSE_POSITION
                 && pendingEv.arg_ulong_2 == closedPos.position_ticket)
             {
                 isCopyTradePositionClosed = true;
-                pendingEv.state = Event::EVS_WAIITING_SUCCESS;
+                pendingEv.state = EnumEventState::EVS_WAIITING_SUCCESS;
             }
         }
 
@@ -844,7 +844,7 @@ private:
                 if (pendingEv.eventId == EV_PENDING_WAITING_NEW_POSITION
                     && pendingEv.arg_ulong_1 == closedPos.position_ticket)
                 {
-                    if (pendingEv.state == Event::EVS_WAITING || pendingEv.state == Event::EVS_WAIITING_SUCCESS)
+                    if (pendingEv.state == EnumEventState::EVS_WAITING || pendingEv.state == EnumEventState::EVS_WAIITING_SUCCESS)
                     {
                         hasPendingAddNewPosEvent = true;
                         LOGD("the target has not done placing position, server-ticket" + (string)closedPos.position_ticket);

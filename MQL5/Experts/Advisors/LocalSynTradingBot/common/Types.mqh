@@ -82,6 +82,30 @@ enum EnumSymbolType
 class iPosition
 {
 public:
+    iPosition()
+    {
+        position_ticket = 0;
+        symbol = "";
+        position_type = 0;
+        status = 0;
+        volume = 0;
+        price_open = 0;
+        magic_number = 0;
+        price_close = 0;
+        close_reason = 0;
+    }
+    iPosition(const iPosition& src)
+    {
+        position_ticket = src.position_ticket;
+        symbol = src.symbol;
+        position_type = src.position_type;
+        status = src.status;
+        volume = src.volume;
+        price_open = src.price_open;
+        magic_number = src.magic_number;
+        price_close = src.price_close;
+        close_reason = src.close_reason;
+    }
     ulong                position_ticket;
     string               symbol;
     EnumPositionType     position_type; // ePOSITION_TYPE_BUY, ePOSITION_TYPE_SELL, ...

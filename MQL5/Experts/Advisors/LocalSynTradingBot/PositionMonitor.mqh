@@ -94,7 +94,7 @@ public:
         //==================================================
         // Detect CLOSED positions
         //==================================================
-        iPosition closedPos = {0};
+        iPosition closedPos;
         for(i = 0; i < prev_total; i++)
         {
             ticket = mPositions[i].position_ticket;

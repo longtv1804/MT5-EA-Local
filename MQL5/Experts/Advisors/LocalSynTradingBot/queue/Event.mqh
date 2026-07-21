@@ -1,25 +1,26 @@
 #include "../common/Types.mqh"
 class iHandler;
 
+enum EnumEventState
+{
+    EVS_CREATED,
+    EVS_QUEUED,
+    EVS_DISPATCHING,
+    EVS_DROP,
+    EVS_DONE,
+    EVS_FAILED,
+
+    EVS_WAITING,
+    EVS_WAIITING_SUCCESS,
+    EVS_WAITING_FAILED,
+    
+    EVS_TIMEOUT
+};
+
 class Event
 {
 public:
     int eventId;
-    enum EnumEventState
-    {
-        EVS_CREATED,
-        EVS_QUEUED,
-        EVS_DISPATCHING,
-        EVS_DROP,
-        EVS_DONE,
-        EVS_FAILED,
-
-        EVS_WAITING,
-        EVS_WAIITING_SUCCESS,
-        EVS_WAITING_FAILED,
-        
-        EVS_TIMEOUT
-    };
     EnumEventState state;
     int retry_count;
     datetime startTime;
@@ -48,6 +49,22 @@ public:
     Event()
     {
         Reset();
+    }
+    Event(const Event& src)
+    {
+       eventId      = src.eventId;
+       state        = src.state;
+       retry_count  = src.retry_count;
+       startTime    = src.startTime;
+       arg_int_1    = src.arg_int_1;
+       arg_int_2    = src.arg_int_2;
+       arg_double_1 = src.arg_double_1;
+       arg_double_2 = src.arg_double_2;
+       arg_ulong_1  = src.arg_ulong_1;
+       arg_ulong_2  = src.arg_ulong_2;
+       arg_string   = src.arg_string;
+       handler      = src.handler;
+       ArrayCopy(data, src.data);
     }
 
     void Reset()

@@ -29,8 +29,8 @@ public:
         Event copiedEv;
         while (i < size)
         {
-            if (mPendingList.At(i).state == Event::EVS_WAIITING_SUCCESS ||
-                mPendingList.At(i).state == Event::EVS_WAITING_FAILED)
+            if (mPendingList.At(i).state == EnumEventState::EVS_WAIITING_SUCCESS ||
+                mPendingList.At(i).state == EnumEventState::EVS_WAITING_FAILED)
             {
                 copiedEv = *(mPendingList.At(i));
                 copiedEv.handler.HandlePendingEventDone(copiedEv);
@@ -41,7 +41,7 @@ public:
             {
                 if (now - mPendingList.At(i).startTime >= PENDING_EVNT_TIMEOUT)
                 {
-                    mPendingList.At(i).state = Event::EVS_TIMEOUT;
+                    mPendingList.At(i).state = EnumEventState::EVS_TIMEOUT;
                     copiedEv = *(mPendingList.At(i));
                     copiedEv.handler.HandlePendingEventDone(copiedEv);
                     mPendingList.Remove(i);
@@ -58,7 +58,7 @@ public:
     void AddEvent(const Event& ev)
     {
         mPendingList.Add(ev);
-        mPendingList.At(mPendingList.Size() - 1).state      = Event::EVS_WAITING;
+        mPendingList.At(mPendingList.Size() - 1).state      = EnumEventState::EVS_WAITING;
         mPendingList.At(mPendingList.Size() - 1).startTime   = TimeCurrent();
     }
 
