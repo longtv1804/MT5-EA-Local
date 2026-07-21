@@ -9,6 +9,7 @@
 
 #include "copytrade/CopyTradeController.mqh"
 #include "common/Utils.mqh"
+#include "PositionMonitor.mqh"
 
 // ================= INPUT =================
 input int i_TerminalMode = 0;       // mode: 1 server, 2, 3, 4, 5.. clients
@@ -32,7 +33,7 @@ CopyTradeController g_CopyTradeController;
 ***********************************************************************/
 void OnTrade()
 {
-   g_CopyTradeController.CheckLocalPositionChanged();
+   PositionMonitor::GetInstance().CheckLocalPositionChanged();
 }
 
 int OnInit()
@@ -50,6 +51,8 @@ int OnInit()
     {
         LOGE("can not detect the brocker");
     }
+
+    PositionMonitor::GetInstance().InitFirstSnapshot();
 
     bool isOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
     if (!isOk)

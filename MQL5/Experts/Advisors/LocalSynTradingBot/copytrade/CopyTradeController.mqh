@@ -9,6 +9,7 @@
 #include "CPT_ServerTerminal.mqh"
 #include "CPT_ClientTerminal.mqh"
 #include "CPT_InOutManager.mqh"
+#include "InstanceHolder.mqh"
 class CopyTradeController
 {
     CPT_LocalTerminal* m_MyTerminal;
@@ -48,10 +49,13 @@ public:
             CommonDatacenter::s_copyTradeMode = eCPT_MODE_CLIENT;
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
-
-        InitFirstSnapshot();
         
         mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
+        if (mIsInitSuccessed)
+        {
+            InstanceHolder::p_localTerminal = m_MyTerminal;
+            InstanceHolder::p_InOutMgr = &mInOutMgr;
+        }
         return mIsInitSuccessed;
     }
 
@@ -90,195 +94,5 @@ public:
         m_MyTerminal.OnTimer();
         PendingEventList::GetInstance().Execute();
         EventQueue::GetInstance().Execute();
-    }
-
-/**********************************************************************************
-*
-*  MQL5: function checking Position change
-*
-***********************************************************************************/
-#ifdef __MQL5__
-    void OnLocal_OnTradeTransaction(const MqlTradeTransaction& trans,
-                            const MqlTradeRequest& request,
-                            const MqlTradeResult& result)
-    {
-        if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
-        {
-            if(!HistoryDealSelect(trans.deal))
-            {
-                return;
-            }
-
-            long entry = HistoryDealGetInteger(trans.deal, DEAL_ENTRY);
-            if(entry == DEAL_ENTRY_IN)
-            {
-                iPosition newPosition = {0};
-
-                ulong positionId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
-
-                newPosition.position_ticket = positionId;
-                newPosition.symbol          = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
-                newPosition.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
-                newPosition.price_open      = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
-
-                // Lấy loại position BUY / SELL
-                ENUM_DEAL_TYPE dealType = (ENUM_DEAL_TYPE)HistoryDealGetInteger(trans.deal, DEAL_TYPE);
-                if(dealType == DEAL_TYPE_BUY)
-                    newPosition.position_type = ePOSITION_TYPE_BUY;
-                else if(dealType == DEAL_TYPE_SELL)
-                    newPosition.position_type = ePOSITION_TYPE_SELL;
-
-                // Position đang mở
-                newPosition.status = ePOSITION_STATUS_OPEN;
-                newPosition.magic_number =  HistoryDealGetInteger(trans.deal, DEAL_MAGIC);
-
-                LOGD(">>> POSITION OPENED: " + ToString(newPosition));
-
-                // callback
-                m_MyTerminal.OnPositionAdded(newPosition);
-            }
-            else if(entry == DEAL_ENTRY_OUT)
-            {
-                iPosition closedPosition = {0};
-
-                closedPosition.position_ticket = HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
-
-                // Lấy loại position BUY / SELL
-                ENUM_DEAL_TYPE dealType = (ENUM_DEAL_TYPE)HistoryDealGetInteger(trans.deal, DEAL_TYPE);
-                if(dealType == DEAL_TYPE_BUY)
-                    closedPosition.position_type = ePOSITION_TYPE_BUY;
-                else if(dealType == DEAL_TYPE_SELL)
-                    closedPosition.position_type = ePOSITION_TYPE_SELL;
-                
-                closedPosition.symbol          = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
-                closedPosition.volume          = HistoryDealGetDouble(trans.deal, DEAL_VOLUME);
-                closedPosition.magic_number    =  HistoryDealGetInteger(trans.deal, DEAL_MAGIC);
-                closedPosition.price_close     = HistoryDealGetDouble(trans.deal, DEAL_PRICE);
-                closedPosition.status          = ePOSITION_STATUS_CLOSED;
-                closedPosition.close_reason    = ConvertCloseReason((ENUM_DEAL_REASON)HistoryDealGetInteger(trans.deal, DEAL_REASON));
-                LOGD(">>> POSITION CLOSED: " + ToString(closedPosition));
-                m_MyTerminal.OnPositionClosed(closedPosition);
-            }
-            else
-            {
-                LOGD(">>> POSITION CHANGED: " + IntegerToString(entry));
-            }
-        }
-    }
-#endif
-/**********************************************************************************
-*
-*  MQL4: function checking Position change
-*      -> sử dụng cho cả MQL5
-*
-***********************************************************************************/
- private:
-    iPosition mPositions[];
-
-    static int FindPositionIndex(iPosition &arr[], ulong ticket)
-    {
-        int total = ArraySize(arr);
-        for(int i = 0; i < total; i++)
-        {
-            if(arr[i].position_ticket == ticket)
-                return i;
-        }
-        return -1;
-    }
-
-    // bởi vì MT4 ko hỗ trợ OnChange trong position
-    // nên khi khởi tạo lần đầu cần lấy snapshot để tránh nhận nhầm tất cả các position
-    // hiện hữu là new position
-    void InitFirstSnapshot()
-    {
-        // lấy snapshot hiện tại
-        iPosition current_positions[];
-        TerminalAPI::DoGetAllPosition(current_positions);
-        int cur_total  = ArraySize(current_positions);
-
-        // lưu snapshot
-        ArrayResize(mPositions, cur_total);
-        LOGD("save first snapshot: " + (string)cur_total);
-        for(int i = 0; i < cur_total; i++)
-        {
-            mPositions[i] = current_positions[i];
-            LOGD(ToString(mPositions[i]));
-        }
-    }
-
-public:
-    void CheckLocalPositionChanged()
-    {
-        // lấy snapshot hiện tại
-        iPosition current_positions[];
-        bool res = false;
-        int retryCount = 0;
-        while (res == false && retryCount < 3)
-        {
-            res = TerminalAPI::DoGetAllPosition(current_positions);
-            retryCount += 1;
-        }
-        if (res == false)
-        {
-            LOGE("can not DoGetAllPosition() after 3 try!!!");
-            return;
-        }
-
-        int cur_total  = ArraySize(current_positions);
-        int prev_total = ArraySize(mPositions);
-
-        int i = 0, idx = 0;
-        ulong ticket = 0;
-
-        //==================================================
-        // Detect CLOSED positions
-        //==================================================
-        iPosition closedPos = {0};
-        for(i = 0; i < prev_total; i++)
-        {
-            ticket = mPositions[i].position_ticket;
-            idx = FindPositionIndex(current_positions, ticket);
-            if(idx < 0)
-            {
-                closedPos = mPositions[i];
-                closedPos.status = ePOSITION_STATUS_CLOSED;
-                LOGD(">>> POSITION CLOSED: " + ToString(closedPos));
-                m_MyTerminal.OnPositionClosed(closedPos);
-            }
-            else
-            {
-                if (current_positions[idx].volume < mPositions[i].volume)
-                {
-                    closedPos = mPositions[i];
-                    closedPos.volume = mPositions[i].volume - current_positions[idx].volume;
-                    closedPos.status = ePOSITION_STATUS_CLOSED;
-                    LOGD(">>> POSITION PARTIAL CLOSED: " + ToString(closedPos));
-                    m_MyTerminal.OnPositionClosed(closedPos);
-                }
-            }
-        }
-
-        //==================================================
-        // Detect NEW positions
-        //==================================================
-        for(i = 0; i < cur_total; i++)
-        {
-            ticket = current_positions[i].position_ticket;
-            idx = FindPositionIndex(mPositions, ticket);
-            if(idx < 0)
-            {
-                LOGD(">>> POSITION ADDED: ticket=" + ToString(current_positions[i]));
-                m_MyTerminal.OnPositionAdded(current_positions[i]);
-            }
-        }
-
-        //==================================================
-        // update snapshot
-        //==================================================
-        ArrayResize(mPositions, cur_total);
-        for(i = 0; i < cur_total; i++)
-        {
-            mPositions[i] = current_positions[i];
-        }
     }
 };
