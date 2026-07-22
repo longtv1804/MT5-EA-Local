@@ -85,10 +85,6 @@ public:
         mQueue[mInIdx] = ev;
         mQueue[mInIdx].state = EnumEventState::EVS_QUEUED;
         mInIdx++;
-        if (mInIdx - mOutIdx == 1)
-        {
-            Execute();
-        }
     }
 
     bool HasEvent(const int event_id, const iHandler* handler) const
