@@ -51,6 +51,8 @@ private:
     void DoCopyTrade_OpendPosition(const Event &ev)
     {
         CopyTradeReqData reqData = EventUtils::ToCopyTradeReqData(ev);
+        // generate pseudo unique magic number
+        reqData.tracking_number = ((ulong)MathRand() << 16) | (ulong)MathRand();
         bool res = TerminalAPI::DoCopyTrade_OpendPosition(reqData);
         if (res == true)
         {

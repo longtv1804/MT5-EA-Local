@@ -405,11 +405,9 @@ public:
     #endif
     }
 
-    static bool DoCopyTrade_OpendPosition(CopyTradeReqData &reqInfo)
+    static bool DoCopyTrade_OpendPosition(const CopyTradeReqData &reqInfo)
     {
         bool res = false;
-        // generate pseudo unique magic number
-        reqInfo.tracking_number = ((ulong)MathRand() << 16) | (ulong)MathRand();
     #ifdef __MQL5__
         CTrade trade;
         trade.SetExpertMagicNumber(reqInfo.tracking_number);
@@ -465,7 +463,7 @@ public:
         return res;
     }
 
-    static bool DoCopyTrade_ClosePosition(CopyTradeReqData &reqInfo)
+    static bool DoCopyTrade_ClosePosition(const CopyTradeReqData &reqInfo)
     {
         ulong ticket = reqInfo.target_ticket;
         if (ticket == 0)
