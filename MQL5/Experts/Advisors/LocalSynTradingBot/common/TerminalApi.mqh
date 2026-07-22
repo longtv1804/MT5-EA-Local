@@ -70,7 +70,7 @@ public:
 
     static iPosition DoGetPosition(ulong position_ticket)
     {
-        iPosition ins = {};
+        iPosition ins;
     #ifdef __MQL5__
         if(PositionSelectByTicket(position_ticket))
         {
@@ -477,7 +477,7 @@ public:
     #ifdef __MQL5__
         if(!PositionSelectByTicket(ticket))
         {
-            LOGD("PositionSelectByTicket failed");
+            LOGD("PositionSelectByTicket failed " + (string)ticket);
             return false;
         }
 
@@ -494,14 +494,14 @@ public:
     #else // MQL4
         if(!OrderSelect((int)ticket, SELECT_BY_TICKET))
         {
-            LOGD("OrderSelect failed");
+            LOGD("OrderSelect failed" + (string)ticket);
             return false;
         }
 
         int type = OrderType();
         if(type != OP_BUY && type != OP_SELL)
         {
-            LOGD("Not market order");
+            LOGD("Not market order " + (string)ticket);
             return false;
         }
 
