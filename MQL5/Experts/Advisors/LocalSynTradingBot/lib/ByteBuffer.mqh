@@ -22,6 +22,7 @@ public:
     {
         mBufferSize = ArraySize(byteArray);
         ArrayResize(mBuffer, mBufferSize);
+        mReadPosition = 0;
         for (int i = 0; i < mBufferSize; i++)
         {
             mBuffer[i] = byteArray[i];
