@@ -7,8 +7,12 @@
 #include "../common/Types.mqh"
 #include "../common/Constants.mqh"
 
+#define SESSIONLOGD(x) LOGD(StringFormat("[%s] %s", (string)mSessionId, x))
+#define SESSIONLOGE(x) LOGE(StringFormat("[%s] %s", (string)mSessionId, x))
+
 class CPT_CopyTradeSession
 {
+private:
     EnumCopyTradeMode mCptMode;
     int mSessionId;
     double mWeight;
@@ -28,7 +32,7 @@ class CPT_CopyTradeSession
         return text;
     }
 
-    static string GetFilePath()
+    string GetFilePath()
     {
         string server_name = AccountInfoString(ACCOUNT_SERVER);
         string broker_name = AccountInfoString(ACCOUNT_COMPANY);
@@ -40,7 +44,7 @@ class CPT_CopyTradeSession
 
         server_name = NormalizeBrokerName(server_name);
         broker_name = NormalizeBrokerName(broker_name);
-        return FOLDER_EA_DIR + "\\CPT_DATA\\" + broker_name + "_" + server_name + "_" + (string)acc_id + ".dat";
+        return FOLDER_EA_DIR + "\\CPT_DATA\\" + broker_name + "_" + server_name + "_" + (string)acc_id + "_" + (string)mSessionId + ".dat";
     }
 
     static void CreateDataFolder()
@@ -74,20 +78,6 @@ public:
     void ClearTradingData()
     {
         ArrayResize(mTradingMap, 0);
-    }
-
-    void SetSessionId(int id)
-    {
-        if (mSessionId != id)
-        {
-            LOGD("Session changed " + (string)mSessionId + " -> " + (string)id);
-            mSessionId = id;
-        }
-    }
-
-    int GetSessionId() const
-    {
-        return mSessionId;
     }
 
     void SetWeight(double weight)
@@ -146,7 +136,7 @@ public:
     void CopyTradingMap(CPT_CopyTradeSession& target) const
     {
         int size = ArraySize(mTradingMap);
-        LOGD("copy trading map, size=" + (string)size);
+        SESSIONLOGD("copy trading map, size=" + (string)size);
         for (int i = 0; i < size; i += 2)
         {
             target.AddCopyTradePosition(mTradingMap[i], mTradingMap[i+1]);
@@ -157,7 +147,7 @@ public:
     {
         if (server_ticket == 0)
         {
-            LOGE("server_ticket = 0");
+            SESSIONLOGE("server_ticket = 0");
             return 0;
         }
         ulong res = 0;
@@ -177,7 +167,7 @@ public:
     {
         if (client_ticket == 0)
         {
-            LOGE("client_ticket = 0");
+            SESSIONLOGE("client_ticket = 0");
             return 0;
         }
         ulong res = 0;
@@ -241,7 +231,7 @@ public:
         int i = 0, j = 0;
         int mapSize = ArraySize(mTradingMap);
         int posNum = ArraySize(latestPositions);
-        LOGD("update latest, size=" + (string)posNum);
+        SESSIONLOGD("update latest, size=" + (string)posNum);
         bool isExisted = false;
         // xóa bỏ các position đã bị close
         for (i = 0; i < mapSize; i+=2)
@@ -258,7 +248,7 @@ public:
             if (isExisted == false)
             {
                 // position đã bị close -> remove it in trading map
-                LOGD("CPT remove: {" + (string)mTradingMap[i] + ", " + (string)mTradingMap[i + 1] +"}");
+                SESSIONLOGD("CPT remove: {" + (string)mTradingMap[i] + ", " + (string)mTradingMap[i + 1] +"}");
                 for (j = i; j < mapSize - 2; j += 2)
                 {
                     mTradingMap[j] = mTradingMap[j + 2];
@@ -312,7 +302,6 @@ public:
             }
             FileClose(handle);
             mCptMode = (EnumCopyTradeMode)ParseIntValue(jsonStr, "cpt_mode");
-            mSessionId = ParseIntValue(jsonStr, "session_id");
             mWeight = ParseDoubleValue(jsonStr, "weight");
             string arrStr = ParseJsonValue(jsonStr, "trade_data");
 
@@ -331,11 +320,11 @@ public:
                 // string -> ulong
                 mTradingMap[i] = (ulong)StringToInteger(parts[i]);
             }
-            LOGD("load trading data from [" + filePath + "], session=" + (string)mSessionId + " arr=[" + arrStr + "]");
+            SESSIONLOGD("load trading data from [" + filePath + "] arr=[" + arrStr + "]");
         }
         else
         {
-            LOGE("Failed to open file: " + filePath);
+            SESSIONLOGE("Failed to open file: " + filePath);
         }
     }
 
@@ -349,7 +338,6 @@ public:
         int size = ArraySize(mTradingMap);
         JsonBuilder builder;
         builder.Set("cpt_mode", (string)mCptMode);
-        builder.Set("session_id", (string)mSessionId);
         builder.Set("weight", (string)mWeight);
 
         string textData = "[";
@@ -373,11 +361,11 @@ public:
         {
             FileWrite(handle, builder.Build());
             FileClose(handle);
-            LOGD("save to file: " + filePath);
+            SESSIONLOGD("save to file: " + filePath);
         }
         else
         {
-            LOGE("Failed to open file: " + filePath);
+            SESSIONLOGE("Failed to open file: " + filePath);
         }
     }
 
@@ -397,14 +385,14 @@ public:
             if ((mTradingMap[i] != 0 && mTradingMap[i] == serverPosId)
                 || (mTradingMap[i + 1] != 0 && mTradingMap[i + 1] == myPosId))
             {
-                LOGE("Dupplicated serverPosId:" + (string)serverPosId + " or myPosId:" + (string)myPosId);
+                SESSIONLOGE("Dupplicated serverPosId:" + (string)serverPosId + " or myPosId:" + (string)myPosId);
                 return;
             }
         }
         ArrayResize(mTradingMap, size + 2);
         mTradingMap[size] = serverPosId;
         mTradingMap[size + 1] = myPosId;
-        LOGD("CPT added: {" + (string)serverPosId + ", " + (string)myPosId +"}");
+        SESSIONLOGD("CPT added: {" + (string)serverPosId + ", " + (string)myPosId +"}");
     }
 
     void RemoveCopyTradePosition(ulong server_posId, ulong myPosId)
@@ -422,13 +410,13 @@ public:
                 }
                 ArrayResize(mTradingMap, size - 2);
                 isRemove = true;
-                LOGD("CPT remove: {" + (string)server_posId + ", " + (string)myPosId +"}");
+                SESSIONLOGD("CPT remove: {" + (string)server_posId + ", " + (string)myPosId +"}");
                 break;
             }
         }
         if (!isRemove)
         {
-            LOGE("ERROR: no trading data match {" + (string)server_posId + "," + (string)myPosId + "}");
+            SESSIONLOGE("ERROR: no trading data match {" + (string)server_posId + "," + (string)myPosId + "}");
         }
     }
 
@@ -499,6 +487,6 @@ public:
             }
         }
         textData += "]";
-        LOGD("SESSION:" + (string)mSessionId + " " + ToString(mCptMode) + " weight=" + (string)mWeight + " trademap=" + textData);
+        SESSIONLOGD(ToString(mCptMode) + " weight=" + (string)mWeight + " trademap=" + textData);
     }
 };
