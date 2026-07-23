@@ -405,7 +405,7 @@ public:
     #endif
     }
 
-    static bool DoCopyTrade_OpendPosition(const CopyTradeReqData &reqInfo)
+    static bool Do_OpendPosition(const CopyTradeReqData &reqInfo)
     {
         bool res = false;
     #ifdef __MQL5__
@@ -463,7 +463,7 @@ public:
         return res;
     }
 
-    static bool DoCopyTrade_ClosePosition(const CopyTradeReqData &reqInfo)
+    static bool Do_ClosePosition(const CopyTradeReqData &reqInfo)
     {
         ulong ticket = reqInfo.target_ticket;
         if (ticket == 0)
