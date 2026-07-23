@@ -88,6 +88,10 @@ public:
     {
     }
 
+    virtual ~CPT_Strategy()
+    {
+    }
+
     bool Init()
     {
         // chủ yếu init liên quan tới session:
