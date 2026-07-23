@@ -61,6 +61,13 @@ enum EnumPositionType
     ePOSITION_TYPE_SELL
 };
 
+enum EnumStrategyPositionType
+{
+    eSPT_BUY = 1,
+    eSPT_SELL,
+    eSPT_BUY_SELL
+};
+
 enum EnumCloseReason
 {
     eCLOSE_REASON_UNKNOWN = 0,

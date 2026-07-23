@@ -38,7 +38,7 @@ public:
         CPT_LocalTerminal::Init(inOutController);
 
         // 1: load previous session và kiểm tra
-        CPT_CopyTradeSession previousSession();
+        CPT_CopyTradeSession previousSession(eCPT_MODE_CLIENT, eSPT_BUY_SELL, 0);
         previousSession.LoadPreviousSession();
         
         iPosition posArr[];
@@ -49,7 +49,7 @@ public:
         int currentPosNum = ArraySize(posArr);
         int closedPosNum  = ArraySize(closedPosition);
         int newPosNum     = ArraySize(newPosition);
-        LOGD("previous mode=" + ToString(previousSession.GetMode()) + " previous-ss:" + (string)previousSession.GetSessionId());
+        LOGD("previous mode=" + ToString(previousSession.GetMode()));
         LOGD("currentPosNum=" + (string)currentPosNum +" closedPosNum=" + (string)closedPosNum + " newPosNum=" + (string)newPosNum);
 
         bool res = true;
@@ -78,7 +78,7 @@ public:
                 // nếu dữ liệu trading cũ còn position đang tồn tại
                 if (closedPosNum < previousSession.GetClientPositionNumer())
                 {
-                    mCopyTradeSessionId = previousSession.GetSessionId();
+                    mCopyTradeSessionId = MathRand();
                 }
                 // ko còn 
                 else
@@ -93,7 +93,7 @@ public:
             res = false;
         }
 
-        LOGD("SERVER: previous(" + (string) previousSession.GetSessionId() + ") -> session=(" + (string)mCopyTradeSessionId + ")");
+        LOGD("SERVER: session=(" + (string)mCopyTradeSessionId + ")");
 
         if (res)
         {

@@ -8,15 +8,15 @@
 
 #include "copytrade/CopyTradeController.mqh"
 #include "common/Utils.mqh"
+#include "common/Constants.mqh"
 #include "PositionMonitor.mqh"
 
 // ================= INPUT =================
 input int i_TerminalMode = 0;       // mode: 1 server, 2, 3, 4, 5.. clients
 input double i_Weight = 1.0;        // trong so
-input bool i_RevertPositionEnable = false;      // vao lenh nguoc
-input int i_RevertPositionPLAN = 0;             // plan_id
-input double i_RpStopLossThreshold = 100.00;    // gioi han am
-input double i_RpTakeProfitThreshold = 200.00;  // gioi han de takeprofit
+input int i_CopyTradePlan = 1;             // plan_id
+input double i_StopLossThreshold = 100.00;    // gioi han am
+input double i_TakeProfitThreshold = 200.00;  // gioi han de takeprofit
 
 /**********************************************************************
 *
@@ -32,7 +32,7 @@ CopyTradeController g_CopyTradeController;
 ***********************************************************************/
 int OnInit()
 {
-    LOGD("*************** LOCAL EA COPY TRADING INIT ****************");
+    LOGD("*************** LOCAL EA COPY TRADING INIT (" + CPT_EA_VER + ")****************");
 
     if (i_TerminalMode == eCPT_MODE_UNKNOWN)
     {
@@ -50,15 +50,40 @@ int OnInit()
 
     PositionMonitor::GetInstance().InitFirstSnapshot();
 
-    bool isOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
-    if (!isOk)
+    bool isInitOk = false;
+    do {
+        // init connection and client/server first
+        isInitOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
+        if (!isInitOk)
+        {
+            break;
+        }
+
+        // init strategy
+        isInitOk = g_CopyTradeController.SetStrategyPlan(i_CopyTradePlan);
+        if (!isInitOk)
+        {
+            break;
+        }
+
+        // set các param khác
+        g_CopyTradeController.SetStrategyParam(i_StopLossThreshold, i_TakeProfitThreshold);
+
+        // finally: init the timer
+        EventSetTimer(1);
+
+    } while(false);
+
+    if (!isInitOk)
     {
-        TerminalAPI::DoCloseEA();
+        LOGD("Init EA FAILED!!!");
         return INIT_FAILED;
     }
-    g_CopyTradeController.SetRevertPositionParam(i_RevertPositionEnable, i_RpStopLossThreshold, i_RpTakeProfitThreshold, i_RevertPositionPLAN);
-    EventSetTimer(1);
-    return(INIT_SUCCEEDED);
+    else
+    {
+        LOGD("Init EA SUCCESSED!!!");
+        return INIT_SUCCEEDED;
+    }
 }
 
 void OnDeinit(const int reason)

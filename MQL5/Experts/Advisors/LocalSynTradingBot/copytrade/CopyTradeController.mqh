@@ -34,10 +34,10 @@ public:
 
     bool Init(int terminal_mode, double weight)
     {
-        LOGD("EA: " + CPT_EA_VER);
         // init seed number for MathRand()
         MathSrand(GetTickCount());
 
+        // tạo local terminal instance: server or client
         CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
         if (terminal_mode == eCPT_MODE_SERVER)
         {
@@ -51,6 +51,7 @@ public:
         }
         
         mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
+
         if (mIsInitSuccessed)
         {
             InstanceHolder::p_localTerminal = m_MyTerminal;
@@ -59,14 +60,14 @@ public:
         return mIsInitSuccessed;
     }
 
-    void SetRevertPositionParam(bool isEnable, double slThreshold, double tpThreshold, int plan)
+    bool SetStrategyPlan(int planId)
     {
-        if (isEnable)
-        {
-            m_MyTerminal.SetRpEnable(isEnable);
-            m_MyTerminal.SetRpThresholds(slThreshold, tpThreshold);
-            m_MyTerminal.SetRpPlan(plan);
-        }
+        return m_MyTerminal.InitStrategy(planId);
+    }
+
+    void SetStrategyParam(double slThreshold, double tpThreshold)
+    {
+        m_MyTerminal.SetThresholds(slThreshold, tpThreshold);
     }
 
     void Terminate()

@@ -57,9 +57,8 @@ public:
 ***********************************************************************************/
 public:
     virtual void OnTimer() {}
-    virtual void SetRpEnable(bool isEnable) {}
-    virtual void SetRpPlan(int rp_plan) {}
-    virtual void SetRpThresholds(double slThreshold, double tpThreshold) {}
+    virtual bool InitStrategy(int planId) {return true;}
+    virtual void SetThresholds(double slThreshold, double tpThreshold) {}
 
 /**********************************************************************************
 *
