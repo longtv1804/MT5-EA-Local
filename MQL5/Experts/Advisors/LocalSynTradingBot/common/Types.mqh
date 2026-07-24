@@ -141,3 +141,11 @@ struct CopyTradeReqData
     // magic number để tracking lệnh thành công hay ko
     ulong tracking_number;
 };
+
+enum EnumStrategyPlanId {
+    PLAN_ID_1 = 1,      /*1, vào lệnh tuân theo quy luật của Master*/
+    PLAN_ID_2 = 2,      /*2, vào lệnh volume giảm dần: 0.13, 0.08, 0.05,..*/
+    PLAN_ID_3 = 3,      /*3, vào lệnh từ lệnh thứ i trở đi, vol = tổng vol*/
+    PLAN_ID_4 = 4,      /*4, StopLost đặt ở lệnh thứ i*/
+    PLAN_ID_MAX
+};

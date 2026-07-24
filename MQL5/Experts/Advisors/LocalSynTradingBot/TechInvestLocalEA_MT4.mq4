@@ -7,16 +7,19 @@
 #property link        "https://www.mql5.com"
 
 #include "copytrade/CopyTradeController.mqh"
+#include "common/Types.mqh"
 #include "common/Utils.mqh"
 #include "common/Constants.mqh"
 #include "PositionMonitor.mqh"
 
 // ================= INPUT =================
-input int i_TerminalMode = 0;       // mode: 1 server, 2, 3, 4, 5.. clients
+input string COMMON_setting     = "---- Common Setting ----"
+input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
 input double i_Weight = 1.0;        // trong so
-input int i_CopyTradePlan = 1;             // plan_id
-input double i_StopLossThreshold = 100.00;    // gioi han am
-input double i_TakeProfitThreshold = 200.00;  // gioi han de takeprofit
+input string PLAN_setting       = "----- Plan Setting -----"
+input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
+input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
+input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
 
 /**********************************************************************
 *

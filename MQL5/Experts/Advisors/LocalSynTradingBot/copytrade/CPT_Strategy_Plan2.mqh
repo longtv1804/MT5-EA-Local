@@ -5,12 +5,12 @@
 #include "../common/Utils.mqh"
 #include "../common/Logging.mqh"
 #include "../common/TerminalApi.mqh"
-#include "CPT_Strategy.mqh"
+#include "CPT_Strategy_Plan1.mqh"
 
 /*
-*    vào lệnh giảm dần: 0.08 0.05 0.03 0.02 0.01 0.01
+*    vào lệnh giảm dần: 0.13 0.08 0.05 0.03 0.02 0.01 0.01
 */
-class CPT_Stategy_DragDownVolume : public CPT_Strategy
+class CPT_Stategy_DragDownVolume : public CPT_Stategy_DefaultPlan
 {
 private:
     enum
@@ -19,8 +19,8 @@ private:
         SET_SL_DISTANCE = 5
     };
     EnumPositionType mType;
-    double mVolumePlan[];
-    int mPlanIdx;
+    double mStartVolume;
+    double mCurrentVolume;
 
     List<iPosition> mPositions;
     double mStopLostPrice;
@@ -49,13 +49,12 @@ private:
     }
 
 public:
-    CPT_Stategy_DragDownVolume(EnumPositionType type)
+    CPT_Stategy_DragDownVolume(EnumPositionType type, double weigt)
     : mPositions(new iPositionComparator())
     {
-        const double plan[] = {0.13, 0.08, 0.05, 0.03, 0.02, 0.01};
-        ArrayCopy(mVolumePlan, plan);
+        mStartVolume = 0.0;
+        mCurrentVolume = 0.0;
         mStopLostPrice = 0;
-        mPlanIdx = 0;
         mType = type;
     }
 
@@ -184,6 +183,12 @@ public:
             }
         }
     }
+
+    virtual void OnServerUpdate(const iPosition &server_positions[], const iPosition &now_client_positions[]) override
+    {
+        
+    }
+
     void HandleEvent(const Event &ev) {}
     void HandlePendingEventDone(const Event &ev) {}
 };
