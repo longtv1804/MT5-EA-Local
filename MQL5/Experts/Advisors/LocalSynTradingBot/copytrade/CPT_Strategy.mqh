@@ -18,9 +18,12 @@ protected:
         EV_ADD_NEW_POSITION_DONE,
         EV_CLOSED_POSITION,
         EV_CLOSED_POSITION_DONE,
+        
         EV_PENDING_CLOSE_NOT_ADDED_POSITION,
         EV_PENDING_WAITING_NEW_POSITION,
-        EV_PENDING_WAITING_CLOSE_POSITION
+        EV_PENDING_WAITING_CLOSE_POSITION,
+
+        EV_STATEGY_UPDATE_PARAMS
     };
 
     static string EventToString(int evid)
@@ -34,6 +37,7 @@ protected:
             case EV_PENDING_CLOSE_NOT_ADDED_POSITION:   return "EV_PENDING_CLOSE_NOT_ADDED_POSITION";
             case EV_PENDING_WAITING_NEW_POSITION:       return "EV_PENDING_WAITING_NEW_POSITION";
             case EV_PENDING_WAITING_CLOSE_POSITION:     return "EV_PENDING_WAITING_CLOSE_POSITION";
+            case EV_STATEGY_UPDATE_PARAMS:              return "EV_STATEGY_UPDATE_PARAMS";
             default: return (string) evid;
         }
     }
@@ -60,6 +64,46 @@ public:
     virtual void OnServer_NewPositionAdded(const iPosition &newPos) = 0;
     virtual void OnServer_PositionClosed(const iPosition &closedPos) = 0;
 
+protected:
+    // check xem position có thuộc về Strategy này không
+    bool CheckPositionByType(const iPosition& pos)
+    {
+        if (mStrategyPositionType == eSPT_BUY_SELL || 
+            (mStrategyPositionType == eSPT_BUY && pos.position_type == ePOSITION_TYPE_BUY) ||
+            (mStrategyPositionType == eSPT_SELL && pos.position_type == ePOSITION_TYPE_SELL))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    // check xem server-position có thuộc về Strategy này không
+    bool CheckServerPositionByType(const iPosition& server_pos)
+    {
+        if (mStrategyPositionType == eSPT_BUY_SELL || 
+            (mStrategyPositionType == eSPT_BUY && server_pos.position_type == ePOSITION_TYPE_BUY) ||
+            (mStrategyPositionType == eSPT_SELL && server_pos.position_type == ePOSITION_TYPE_SELL))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    // check xem server-position có thuộc về Strategy này không.
+    // dành cho plan vào lệnh ngược với server
+    // server: buy -> client: sell
+    // server: sell -> client: buy
+    bool RP_CheckServerPositionByType(const iPosition& server_pos)
+    {
+        if (mStrategyPositionType == eSPT_BUY_SELL || 
+            (mStrategyPositionType == eSPT_BUY && server_pos.position_type == ePOSITION_TYPE_SELL) ||
+            (mStrategyPositionType == eSPT_SELL && server_pos.position_type == ePOSITION_TYPE_BUY))
+        {
+            return true;
+        }
+        return false;
+    }
+
 private:
     void GetPositionByType(iPosition& targetArr[])
     {
@@ -70,9 +114,7 @@ private:
         ArrayResize(targetArr, 0);
         for (int i = 0; i < currPosSize; i++)
         {
-            if (mStrategyPositionType == eSPT_BUY_SELL || 
-                (mStrategyPositionType == eSPT_BUY && currentPositionsArr[i].position_type == ePOSITION_TYPE_BUY) ||
-                (mStrategyPositionType == eSPT_SELL && currentPositionsArr[i].position_type == ePOSITION_TYPE_SELL))
+            if (CheckPositionByType(currentPositionsArr[i]))
             {
                 ArrayResize(targetArr, targetSize + 1);
                 targetArr[targetSize] = currentPositionsArr[i];
