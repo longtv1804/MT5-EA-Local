@@ -262,6 +262,7 @@ public:
         if(PositionSelectByTicket(position_ticket))
         {
             CTrade trade;
+            trade.SetAsyncMode(true);
             res = trade.PositionClose(position_ticket);
             if (res == true)
             {
@@ -355,6 +356,7 @@ public:
     {
     #ifdef __MQL5__
         CTrade trade;
+        trade.SetAsyncMode(true);
         int total = PositionsTotal();
         while (total > 0)
         {
@@ -411,6 +413,7 @@ public:
     #ifdef __MQL5__
         CTrade trade;
         trade.SetExpertMagicNumber(reqInfo.tracking_number);
+        trade.SetAsyncMode(true);
         if (reqInfo.position_type == ePOSITION_TYPE_BUY)
         {
             res = trade.Buy(reqInfo.volume);
@@ -482,6 +485,7 @@ public:
         string symbol = PositionGetString(POSITION_SYMBOL);
         
         CTrade trade;
+        trade.SetAsyncMode(true);
         bool ok = trade.PositionClose(ticket);
         if(!ok)
         {
