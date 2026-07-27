@@ -65,9 +65,9 @@ public:
         return m_MyTerminal.InitStrategy(planId);
     }
 
-    void SetStrategyParam(double slThreshold, double tpThreshold)
+    void SetStrategyParam(ByteBuffer &buffer)
     {
-        m_MyTerminal.SetThresholds(slThreshold, tpThreshold);
+        m_MyTerminal.SetStrategyParam(buffer);
     }
 
     void Terminate()

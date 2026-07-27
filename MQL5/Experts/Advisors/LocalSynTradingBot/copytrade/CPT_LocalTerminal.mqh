@@ -4,6 +4,7 @@
 #include "../common/Types.mqh"
 #include "../common/Utils.mqh"
 #include "../queue/Handler.mqh"
+#include "../lib/ByteBuffer.mqh"
 #include "CPT_InOutManager.mqh"
 
 class CPT_LocalTerminal : public Handler
@@ -58,7 +59,7 @@ public:
 public:
     virtual void OnTimer() {}
     virtual bool InitStrategy(int planId) {return true;}
-    virtual void SetThresholds(double slThreshold, double tpThreshold) {}
+    virtual void SetStrategyParam(ByteBuffer& param) {}
 
 /**********************************************************************************
 *

@@ -2,6 +2,7 @@
 #include "../queue/Event.mqh"
 #include "../common/Types.mqh"
 #include "../common/TerminalApi.mqh"
+#include "../lib/ByteBuffer.mqh"
 #include "CPT_CopyTradeSession.mqh"
 
 #define STRATEGY_LOGD(x) LOGD(StringFormat("[%s] %s", (string)mStrategyPositionType, x))
@@ -12,20 +13,6 @@ class Event;
 class CPT_Strategy : public Handler
 {
 protected:
-    enum EnumCopyTradeEvent
-    {
-        EV_ADD_NEW_POSITION = 1,
-        EV_ADD_NEW_POSITION_DONE,
-        EV_CLOSED_POSITION,
-        EV_CLOSED_POSITION_DONE,
-        
-        EV_PENDING_CLOSE_NOT_ADDED_POSITION,
-        EV_PENDING_WAITING_NEW_POSITION,
-        EV_PENDING_WAITING_CLOSE_POSITION,
-
-        EV_STATEGY_UPDATE_PARAMS
-    };
-
     static string EventToString(int evid)
     {
         switch (evid)
@@ -37,7 +24,9 @@ protected:
             case EV_PENDING_CLOSE_NOT_ADDED_POSITION:   return "EV_PENDING_CLOSE_NOT_ADDED_POSITION";
             case EV_PENDING_WAITING_NEW_POSITION:       return "EV_PENDING_WAITING_NEW_POSITION";
             case EV_PENDING_WAITING_CLOSE_POSITION:     return "EV_PENDING_WAITING_CLOSE_POSITION";
-            case EV_STATEGY_UPDATE_PARAMS:              return "EV_STATEGY_UPDATE_PARAMS";
+            case EV_STRATEGY_UPDATE_PARAMS:              return "EV_STRATEGY_UPDATE_PARAMS";
+            case EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER:
+                return "EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER";
             default: return (string) evid;
         }
     }

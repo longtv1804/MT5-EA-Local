@@ -3,13 +3,8 @@
 #include "CPT_Strategy.mqh"
 #include "CPT_Strategy_Plan1.mqh"
 //#include "CPT_Strategy_Plan2.mqh"
-
-enum EnumStrategyPlanId {
-    PLAN_ID_1 = 1,    // vào lệnh tăng dần theo server
-    PLAN_ID_2 = 2,    // vào lệnh volume giảm dần
-    PLAN_ID_3 = 3,    // vào lệnh volume giảm dần, kèm vào lệnh 2 chiều ở lệnh đầu tiên
-    PLAN_ID_MAX
-};
+#include "CPT_Strategy_Plan3.mqh"
+#include "CPT_Strategy_Plan4.mqh"
 
 class CPT_Strategy_Factory
 {
@@ -18,8 +13,10 @@ public:
     {
         switch(planId)
         {
-            case PLAN_ID_1: return new CPT_Stategy_DefaultPlan(type, weight);
-            //case PLAN_ID_2: return new CPT_Stategy_DragDownVolume(type, weight);
+            case PLAN_ID_1: return new CPT_Strategy_DefaultPlan(type, weight);
+            //case PLAN_ID_2: return new CPT_Strategy_DragDownVolume(type, weight);
+            case PLAN_ID_3: return new CPT_Strategy_AfterOrderX(type, weight);
+            case PLAN_ID_4: return new CPT_Strategy_UntillTheOrderX(type, weight);
             default:
                 return NULL;
         }

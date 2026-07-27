@@ -13,13 +13,14 @@
 #include "PositionMonitor.mqh"
 
 // ================= INPUT =================
-input string COMMON_setting     = "---- Common Setting ----"
-input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
+input EnumCopyTradeMode i_TerminalMode = 0;       // Copy Mode
 input double i_Weight = 1.0;        // trong so
-input string PLAN_setting       = "----- Plan Setting -----"
+input const string PLAN_setting = "======== Setting for Plan ========";
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
-input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
-input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
+input int i_Plan3_StartAtIdx = 0;                   // vào lệnh từ Position số
+input int i_Plan4_StopLostAtIdx = 0;                // StopLost ở lệnh số
+// input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
+// input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
 
 /**********************************************************************
 *
@@ -70,7 +71,10 @@ int OnInit()
         }
 
         // set các param khác
-        g_CopyTradeController.SetStrategyParam(i_StopLossThreshold, i_TakeProfitThreshold);
+        ByteBuffer buffer;
+        buffer.WriteInt(i_Plan3_StartAtIdx);
+        buffer.WriteInt(i_Plan4_StopLostAtIdx);
+        g_CopyTradeController.SetStrategyParam(buffer);
 
         // finally: init the timer
         EventSetTimer(1);

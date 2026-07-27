@@ -8,7 +8,7 @@
 /*
 *    vào lệnh bình thường cùng chiều và theo volume*(trọng số)
 */
-class CPT_Stategy_DefaultPlan : public CPT_Strategy
+class CPT_Strategy_DefaultPlan : public CPT_Strategy
 {
 protected:
     /**********************************************************************************
@@ -102,12 +102,12 @@ protected:
     *
     ***********************************************************************************/
 public:
-    CPT_Stategy_DefaultPlan(EnumStrategyPositionType type, double weight) 
+    CPT_Strategy_DefaultPlan(EnumStrategyPositionType type, double weight) 
     : CPT_Strategy(type, weight)
     {
     }
 
-    ~CPT_Stategy_DefaultPlan()
+    ~CPT_Strategy_DefaultPlan()
     {
     }
 

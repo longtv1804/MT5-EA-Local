@@ -67,6 +67,19 @@ public:
                     mStrategyList.Add(pStrategy);
                 }
                 break;
+            case EnumStrategyPlanId::PLAN_ID_3:
+            case EnumStrategyPlanId::PLAN_ID_4:
+                pStrategy = CPT_Strategy_Factory::Make(mPlanId, eSPT_BUY, mWeight);
+                if (pStrategy)
+                {
+                    mStrategyList.Add(pStrategy);
+                }
+                pStrategy = CPT_Strategy_Factory::Make(mPlanId, eSPT_SELL, mWeight);
+                if (pStrategy)
+                {
+                    mStrategyList.Add(pStrategy);
+                }
+                break;
             default:
                 break;
         }
@@ -88,6 +101,16 @@ public:
             mStrategyList.Clear();
         }
         return res;
+    }
+
+    void SetStrategyParam(ByteBuffer& param) override
+    {
+        for (int i = 0; i < mStrategyList.Size(); i++)
+        {
+            Event ev = ObtainEvent(EV_STRATEGY_UPDATE_PARAMS, mStrategyList.At(i));
+            param.CopyBuffer(ev.data);
+            SendEvent(ev);
+        }
     }
 
     void Terminate() override

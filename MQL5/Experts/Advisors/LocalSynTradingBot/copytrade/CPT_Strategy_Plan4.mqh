@@ -1,23 +1,38 @@
 #include "CPT_Strategy_Plan1.mqh"
 
 /*
-*    chỉ vào lệnh từ lệnh thứ i trở đi, các lệnh vào phải tương ứng với từng lệnh trước đó.
+*    SL ở lệnh thứ i
 */
-class CPT_Strategy_AfterOrderX : public CPT_Strategy_DefaultPlan
+class CPT_Strategy_UntillTheOrderX : public CPT_Strategy_DefaultPlan
 {
+private:
     // lưu các server-position
     List<iPosition> mServerPositions;
 
-    int mIdxStartOfStrategy;
-    bool mIsOrderTriggered;
+    int mStopLost_At_i;
+    bool mStopLostTrigged;
+
+protected:
+    virtual void Do_CloseAllPositionsWithoutServerTrigger()
+    {
+        ulong tradingData[];
+        int size = mSession.GetTradingData(tradingData);
+        for (int i = 0; i < size; i += 2)
+        {
+            if (tradingData[i + 1] != 0)
+            {
+                TerminalAPI::DoClosePosition(tradingData[i + 1]);
+            }
+        }
+    }
 
 public:
-    CPT_Strategy_AfterOrderX(EnumStrategyPositionType type, double weight)
+    CPT_Strategy_UntillTheOrderX(EnumStrategyPositionType type, double weight)
     : CPT_Strategy_DefaultPlan(type, weight),
         mServerPositions(new iPositionComparator())
     {
-        mIdxStartOfStrategy = 0;
-        mIsOrderTriggered = false;
+        mStopLost_At_i = 0;
+        mStopLostTrigged = false;
     }
 
     void OnLocal_PositionAdded(const iPosition& newPos) override
@@ -35,7 +50,12 @@ public:
         if (CheckPositionByType(closedPos) == false)
             return;
 
+        ulong server_ticket = mSession.GetServerTicket(closedPos.position_ticket);
         CPT_Strategy_DefaultPlan::OnLocal_PositionClosed(closedPos);
+        if (mStopLostTrigged == true && server_ticket != 0)
+        {
+            mSession.AddCopyTradePosition(server_ticket, 0);
+        }
     }
 
     void OnServer_NewPositionAdded(const iPosition &newPos) override
@@ -45,31 +65,28 @@ public:
             return;
         
         mServerPositions.Add(newPos);
-        if (mIsOrderTriggered == false)
+        if (mStopLostTrigged)
         {
-            // số lượng nhỏ hơn i: waiting
-            if (mServerPositions.Size() < mIdxStartOfStrategy)
-            {
-                // do nothing
-            }
-            // đạt tới số lượng i: bắt đầu đặt lệnh
-            else if (mServerPositions.Size() == mIdxStartOfStrategy)
-            {
-                mIsOrderTriggered = true;
-                for (int i = 0; i < mIdxStartOfStrategy; i++)
-                {
-                    CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(*(mServerPositions.At(i)));
-                }
-            }
-            // số Pos lớn hơn: add position như bình thường
-            else
-            {
-                CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
-            }
+            mSession.AddCopyTradePosition(newPos.position_ticket, 0);
         }
         else
         {
-             CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
+            if (mServerPositions.Size() == mStopLost_At_i)
+            {
+                STRATEGY_LOGD("server-pos=" + (string)mServerPositions.Size() + " close all positions");
+                Event ev = ObtainEvent(EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER);
+                SendEvent(ev);
+                mStopLostTrigged = true;
+            }
+            else if (mServerPositions.Size() > mStopLost_At_i)
+            {
+                STRATEGY_LOGE("not expected, mStopLostTrigged=false");
+            }
+            else
+            {
+                // vào lệnh như bình thường
+                CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
+            }
         }
     }
 
@@ -80,9 +97,10 @@ public:
             return;
         
         mServerPositions.Remove(closedPos);
+        // khi mServerPositions về 0 -> chuyển flag về false để vào lượt lệnh mới
         if (mServerPositions.Size() == 0)
         {
-            mIsOrderTriggered = false;
+            mStopLostTrigged = false;
         }
         CPT_Strategy_DefaultPlan::OnServer_PositionClosed(closedPos);
     }
@@ -100,10 +118,19 @@ public:
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
-                mIdxStartOfStrategy = buffer.ReadInt();
-                STRATEGY_LOGD("mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy);
+                                    buffer.ReadInt();       // ignore first number
+                mStopLost_At_i =    buffer.ReadInt();
+                if (mStopLost_At_i <= 1)
+                {
+                    STRATEGY_LOGD("User set wrong mStopLost_At_i, make it to default");
+                    mStopLost_At_i = 2;
+                }
+                STRATEGY_LOGD("mStopLost_At_i=" + (string)mStopLost_At_i);
                 break;
             }
+            case EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER:
+                Do_CloseAllPositionsWithoutServerTrigger();
+                break;
             default:
                 CPT_Strategy_DefaultPlan::HandleEvent(ev);
                 break;

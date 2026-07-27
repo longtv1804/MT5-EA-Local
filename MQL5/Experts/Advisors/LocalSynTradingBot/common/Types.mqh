@@ -128,6 +128,21 @@ public:
 /*********************************************************
 *   Copy trade types
 **********************************************************/
+enum EnumCopyTradeEvent
+{
+    EV_ADD_NEW_POSITION = 1,
+    EV_ADD_NEW_POSITION_DONE,
+    EV_CLOSED_POSITION,
+    EV_CLOSED_POSITION_DONE,
+    
+    EV_PENDING_CLOSE_NOT_ADDED_POSITION,
+    EV_PENDING_WAITING_NEW_POSITION,
+    EV_PENDING_WAITING_CLOSE_POSITION,
+
+    EV_STRATEGY_UPDATE_PARAMS,
+    EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER
+};
+
 struct CopyTradeReqData
 {
     ulong server_ticket;
