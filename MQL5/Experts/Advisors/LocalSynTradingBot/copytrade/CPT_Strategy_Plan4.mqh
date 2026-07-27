@@ -77,6 +77,7 @@ public:
                 Event ev = ObtainEvent(EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER);
                 SendEvent(ev);
                 mStopLostTrigged = true;
+                mSession.AddCopyTradePosition(newPos.position_ticket, 0);
             }
             else if (mServerPositions.Size() > mStopLost_At_i)
             {
