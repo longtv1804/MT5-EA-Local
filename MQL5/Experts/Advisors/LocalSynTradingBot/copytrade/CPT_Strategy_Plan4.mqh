@@ -112,7 +112,6 @@ public:
             STRATEGY_LOGE("Event is in wrong state " + (string)ev.eventId + " " + (string)ev.state);
             return;
         }
-        STRATEGY_LOGD("EventId=" + EventToString(ev.eventId));
         switch (ev.eventId)
         {
             case EV_STRATEGY_UPDATE_PARAMS:
@@ -125,10 +124,11 @@ public:
                     STRATEGY_LOGD("User set wrong mStopLost_At_i, make it to default");
                     mStopLost_At_i = 2;
                 }
-                STRATEGY_LOGD("mStopLost_At_i=" + (string)mStopLost_At_i);
+                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mStopLost_At_i=" + (string)mStopLost_At_i);
                 break;
             }
             case EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER:
+                STRATEGY_LOGD("EV_STRATEGY_CLOSE_ALL_POSITIONS_WITHOUT_SERVER_TRIGGER");
                 Do_CloseAllPositionsWithoutServerTrigger();
                 break;
             default:

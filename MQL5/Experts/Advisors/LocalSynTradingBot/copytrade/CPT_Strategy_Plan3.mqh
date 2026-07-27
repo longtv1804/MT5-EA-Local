@@ -94,14 +94,13 @@ public:
             STRATEGY_LOGE("Event is in wrong state " + (string)ev.eventId + " " + (string)ev.state);
             return;
         }
-        STRATEGY_LOGD("EventId=" + EventToString(ev.eventId));
         switch (ev.eventId)
         {
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
                 mIdxStartOfStrategy = buffer.ReadInt();
-                STRATEGY_LOGD("mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy);
+                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy);
                 break;
             }
             default:
