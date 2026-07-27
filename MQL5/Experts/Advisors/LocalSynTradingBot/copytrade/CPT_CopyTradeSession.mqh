@@ -211,7 +211,7 @@ public:
         return false;
     }
 
-    void GetTradingData(ulong &arr[]) const
+    int GetTradingData(ulong &arr[]) const
     {
         int size = ArraySize(mTradingMap);
         ArrayResize(arr, size);
@@ -219,6 +219,7 @@ public:
         {
             arr[i] = mTradingMap[i];
         }
+        return size;
     }
 
     /**********************************************************************************
