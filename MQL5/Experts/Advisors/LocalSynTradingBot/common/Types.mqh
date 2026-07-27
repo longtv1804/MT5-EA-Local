@@ -158,9 +158,9 @@ struct CopyTradeReqData
 };
 
 enum EnumStrategyPlanId {
-    PLAN_ID_1 = 1,      /*1, vào lệnh tuân theo quy luật của Master*/
-    PLAN_ID_2 = 2,      /*2, vào lệnh volume giảm dần: 0.13, 0.08, 0.05,..*/
-    PLAN_ID_3 = 3,      /*3, vào lệnh từ lệnh thứ i trở đi, vol = tổng vol*/
-    PLAN_ID_4 = 4,      /*4, StopLost đặt ở lệnh thứ i*/
+    PLAN_ID_1 = 1,      /*PLAN-1: Open position follow Master*/
+    PLAN_ID_2 = 2,      /*PLAN-2: Dragdown volume: 0.13, 0.08, 0.05,..*/
+    PLAN_ID_3 = 3,      /*PLAN-3: Open position start from i'th order*/
+    PLAN_ID_4 = 4,      /*PLAN-4: StopLost at i'th order*/
     PLAN_ID_MAX
 };

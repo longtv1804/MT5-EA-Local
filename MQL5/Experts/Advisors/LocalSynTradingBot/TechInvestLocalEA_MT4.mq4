@@ -13,12 +13,13 @@
 #include "PositionMonitor.mqh"
 
 // ================= INPUT =================
+input const string COMMON_setting = "---- Common Setting ----";
 input EnumCopyTradeMode i_TerminalMode = 0;       // Copy Mode
 input double i_Weight = 1.0;        // trong so
-input const string PLAN_setting = "======== Setting for Plan ========";
+input const string PLAN_setting = "---- Setting for Plan ----";
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
-input int i_Plan3_StartAtIdx = 0;                   // vào lệnh từ Position số
-input int i_Plan4_StopLostAtIdx = 0;                // StopLost ở lệnh số
+input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vao lenh tu Position so
+input int i_Plan4_StopLostAtIdx = 0;                // PLAN4: StopLost o lenh so
 // input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
 // input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
 

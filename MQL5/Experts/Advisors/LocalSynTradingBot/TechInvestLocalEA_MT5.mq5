@@ -17,7 +17,7 @@
 // ================= INPUT =================
 input group "---- Common Setting ----"
 input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
-input double i_Weight = 1.0;        // trong so
+input double i_Weight = 1.0;                        // trọng số
 input group "----- Plan Setting -----"
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
 input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vào lệnh từ Position số
