@@ -14,4 +14,4 @@ int MAX_CLIENT = 5;
 string CPT_CLIENT_OUTPUT_FILE_HEADER    = FOLDER_EA_DIR + "\\CPT_client_";
 string CPT_SERVER_OUTPUT_FILE_PATH      = FOLDER_EA_DIR + "\\CPT_server.dat";
 
-string CPT_EA_VER = "CopyTradeEA_v2.0.0";
+string CPT_EA_VER = "CopyTradeEA_v2.1.0";
