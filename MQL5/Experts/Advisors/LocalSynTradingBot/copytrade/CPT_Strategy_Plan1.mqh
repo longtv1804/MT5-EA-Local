@@ -35,7 +35,15 @@ protected:
     }
     virtual void On_OpendPositionDone(const Event &ev) override
     {
-        mSession.AddCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+        EnumEventState closePosState = (EnumEventState)ev.arg_int_1;
+        if (closePosState == EnumEventState::EVS_WAIITING_SUCCESS)
+        {
+            mSession.AddCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+        }
+        else
+        {
+            mSession.AddCopyTradePosition(ev.arg_ulong_1, 0);
+        }
     }
 
     /*------------------EV_CLOSED_POSITION--------------------------*/
@@ -56,7 +64,19 @@ protected:
     }
     virtual void On_ClosePositionDone(const Event &ev) override
     {
-        mSession.RemoveCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+        EnumEventState closePosState = (EnumEventState)ev.arg_int_1;
+        if (closePosState == EnumEventState::EVS_WAIITING_SUCCESS)
+        {
+            mSession.RemoveCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+        }
+        else
+        {
+            string email_title = "close position " + (string)ev.arg_ulong_2 + " FAILED";
+            string email_content = "close position get failed:\n"
+                                    "client-ticket: " + (string)ev.arg_ulong_2 + "\n"
+                                    "server-ticket: " + (string)ev.arg_ulong_1 ;
+            TerminalAPI::SendEmail(email_title, email_content);
+        }
     }
 
     /**********************************************************************************
@@ -70,10 +90,14 @@ protected:
     virtual void On_WaitingCloseNotAddedPosDone(const Event &pendingEv) override
     {
         STRATEGY_LOGD("server-ticket=" + (string)pendingEv.arg_ulong_1 + " target-ticket=" +  (string)pendingEv.arg_ulong_2);
-        Event ev = ObtainEvent(EV_CLOSED_POSITION);
-        ev.arg_ulong_1 = pendingEv.arg_ulong_1;
-        ev.arg_ulong_2 = pendingEv.arg_ulong_2;
-        SendEvent(ev);
+        if (pendingEv.state == EnumEventState::EVS_WAIITING_SUCCESS)
+        {
+            Event ev = ObtainEvent(EV_CLOSED_POSITION);
+            ev.arg_int_1 = (int)pendingEv.state;
+            ev.arg_ulong_1 = pendingEv.arg_ulong_1;
+            ev.arg_ulong_2 = pendingEv.arg_ulong_2;
+            SendEvent(ev);
+        }
     }
 
     /*----------------EV_PENDING_WAITING_NEW_POSITION------------*/
@@ -81,6 +105,7 @@ protected:
     {
         STRATEGY_LOGD("server-ticket=" + (string)pendingEv.arg_ulong_1 + " new-ticket=" +  (string)pendingEv.arg_ulong_2);
         Event ev = ObtainEvent(EV_ADD_NEW_POSITION_DONE);
+        ev.arg_int_1 = (int)pendingEv.state;
         ev.arg_ulong_1 = pendingEv.arg_ulong_1;     // server-ticket
         ev.arg_ulong_2 = pendingEv.arg_ulong_2;     // client new ticket
         SendEvent(ev);
@@ -90,6 +115,7 @@ protected:
     virtual void On_WaitingClosePosDone(const Event &pendingEv) override
     {
         Event ev = ObtainEvent(EV_CLOSED_POSITION_DONE);
+        ev.arg_int_1 = (int)pendingEv.state;
         ev.arg_ulong_1 = pendingEv.arg_ulong_1;     // server-ticket
         ev.arg_ulong_2 = pendingEv.arg_ulong_2;     // client new ticket
         SendEvent(ev);
@@ -141,12 +167,14 @@ public:
 
     virtual void HandlePendingEventDone(const Event &pendingEv) override
     {
-        if(pendingEv.state != EnumEventState::EVS_WAIITING_SUCCESS)
+        if(pendingEv.state != EnumEventState::EVS_WAIITING_SUCCESS && 
+            pendingEv.state != EnumEventState::EVS_WAITING_FAILED &&
+            pendingEv.state != EnumEventState::EVS_TIMEOUT)
         {
             STRATEGY_LOGD("Event is NOT SUCCESSED: id=" + (string)pendingEv.eventId + " state=" + (string)pendingEv.state);
             return;
         }
-        STRATEGY_LOGD("EventId=" + EventToString(pendingEv.eventId));
+        STRATEGY_LOGD("EventId=" + EventToString(pendingEv.eventId) + " EvState=" + (string)pendingEv.state);
         switch (pendingEv.eventId)
         {
             case EV_PENDING_CLOSE_NOT_ADDED_POSITION:
