@@ -22,6 +22,19 @@ public:
         return NormalizeDouble(volume, digits);
     }
 
+    static double TotalVolume(const EnumPositionType posType, const List<iPosition> &positions)
+    {
+        double totalVolume = 0.0;
+
+        for(int i = 0; i < positions.Size(); i++)
+        {
+            if (positions.At(i).position_type == posType)
+                totalVolume += positions.At(i).volume;
+        }
+
+        return totalVolume;
+    }
+
     static double TotalVolume(const List<iPosition> &positions)
     {
         double totalVolume = 0.0;

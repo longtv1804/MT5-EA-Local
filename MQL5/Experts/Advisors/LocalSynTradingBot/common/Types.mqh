@@ -162,5 +162,6 @@ enum EnumStrategyPlanId {
     PLAN_ID_2 = 2,      /*PLAN-2: Dragdown volume: 0.13, 0.08, 0.05,..*/
     PLAN_ID_3 = 3,      /*PLAN-3: Open position start from i'th order*/
     PLAN_ID_4 = 4,      /*PLAN-4: StopLost at i'th order*/
+    PLAN_ID_5 = 5,      /*PLAN-5: Revert Copy trade*/
     PLAN_ID_MAX
 };

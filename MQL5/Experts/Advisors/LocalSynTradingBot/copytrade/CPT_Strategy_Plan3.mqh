@@ -9,6 +9,7 @@ class CPT_Strategy_AfterOrderX : public CPT_Strategy_DefaultPlan
     List<iPosition> mServerPositions;
 
     int mIdxStartOfStrategy;
+    bool mEnablePlaceOldPositions;
     bool mIsOrderTriggered;
 
 public:
@@ -17,6 +18,7 @@ public:
         mServerPositions(new iPositionComparator())
     {
         mIdxStartOfStrategy = 0;
+        mEnablePlaceOldPositions = false;
         mIsOrderTriggered = false;
     }
 
@@ -56,9 +58,16 @@ public:
             else if (mServerPositions.Size() == mIdxStartOfStrategy)
             {
                 mIsOrderTriggered = true;
-                for (int i = 0; i < mIdxStartOfStrategy; i++)
+                if (mEnablePlaceOldPositions)
                 {
-                    CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(*(mServerPositions.At(i)));
+                    for (int i = 0; i < mIdxStartOfStrategy; i++)
+                    {
+                        CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(*(mServerPositions.At(i)));
+                    }
+                }
+                else
+                {
+                    CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
                 }
             }
             // số Pos lớn hơn: add position như bình thường
@@ -100,6 +109,7 @@ public:
             {
                 ByteBuffer buffer(ev.data);
                 mIdxStartOfStrategy = buffer.ReadInt();
+                mEnablePlaceOldPositions = buffer.ReadBool();
                 STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy);
                 break;
             }

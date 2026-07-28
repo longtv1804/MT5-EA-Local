@@ -69,6 +69,7 @@ public:
                 break;
             case EnumStrategyPlanId::PLAN_ID_3:
             case EnumStrategyPlanId::PLAN_ID_4:
+            case EnumStrategyPlanId::PLAN_ID_5:
                 pStrategy = CPT_Strategy_Factory::Make(mPlanId, eSPT_BUY, mWeight);
                 if (pStrategy)
                 {

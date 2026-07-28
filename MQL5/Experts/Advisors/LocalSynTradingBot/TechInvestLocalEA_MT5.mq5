@@ -21,6 +21,7 @@ input double i_Weight = 1.0;                        // trọng số
 input group "----- Plan Setting -----"
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
 input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vào lệnh từ Position số
+input bool i_Plan3_PlaceOldPositions = true;        // PLAN3: vào cả các lệnh chưa vào
 input int i_Plan4_StopLostAtIdx = 0;                // PLAN4: StopLost ở lệnh số
 // input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
 // input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
@@ -79,6 +80,7 @@ int OnInit()
         // set các param khác
         ByteBuffer buffer;
         buffer.WriteInt(i_Plan3_StartAtIdx);
+        buffer.WriteBool(i_Plan3_PlaceOldPositions);
         buffer.WriteInt(i_Plan4_StopLostAtIdx);
         g_CopyTradeController.SetStrategyParam(buffer);
 
