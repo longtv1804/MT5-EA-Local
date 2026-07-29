@@ -110,7 +110,7 @@ public:
                 ByteBuffer buffer(ev.data);
                 mIdxStartOfStrategy = buffer.ReadInt();
                 mEnablePlaceOldPositions = buffer.ReadBool();
-                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy);
+                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy + " mEnablePlaceOldPositions=" + (string)mEnablePlaceOldPositions);
                 break;
             }
             default:

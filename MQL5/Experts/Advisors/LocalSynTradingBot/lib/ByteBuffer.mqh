@@ -47,6 +47,17 @@ public:
         ArrayCopy(arr, mBuffer, 0, 0, mBufferSize);
     }
 
+    string ToString(const uchar &buffer[]) const
+    {
+        string hex = "Size=" + (string)mBufferSize + " [";
+        for(int i = 0; i < mBufferSize; ++i)
+        {
+            hex += StringFormat("%02X", mBuffer[i]);
+        }
+        hex += "]";
+        return hex;
+    }
+
     /***********************************************************************
     *
     *    Write functions
@@ -102,7 +113,7 @@ public:
 
     void WriteBool(const bool value)
     {
-        int old = mBufferSize += 8;;
+        int old = mBufferSize;
         ArrayResize(mBuffer, old + 1);
         mBuffer[old] = value ? 1 : 0;
         mBufferSize += 1;
