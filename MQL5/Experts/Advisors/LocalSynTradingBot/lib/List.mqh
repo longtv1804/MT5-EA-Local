@@ -50,6 +50,43 @@ public:
         mSize++;
     }
 
+    void Insert (const int idx, const T &obj)
+    {
+        if (idx > mSize || idx < 0)
+        {
+            return;
+        }
+        if (mSize >= mCapacity)
+        {
+            mCapacity *= 2;
+            ArrayResize(mList, mCapacity);
+        }
+        for(int i = mSize - 1; i >= idx; --i)
+        {
+            mList[i + 1] = mList[i];
+        }
+        mList[idx] = obj;
+        mSize++;
+    }
+
+    void OverrideValue(const int idx, const T &obj)
+    {
+        if (idx > mSize || idx < 0)
+        {
+            return;
+        }
+        if (mSize >= mCapacity)
+        {
+            mCapacity *= 2;
+            ArrayResize(mList, mCapacity);
+        }
+        mList[idx] = obj;
+        if (idx == mSize)
+        {
+            mSize++;
+        }
+    }
+
     bool Remove(const T &obj)
     {
         if(mComparer == NULL) return false;
