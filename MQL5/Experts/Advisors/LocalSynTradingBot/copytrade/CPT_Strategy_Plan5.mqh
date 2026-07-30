@@ -183,8 +183,6 @@ public:
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
-                                    buffer.ReadInt();       // ignore first number
-                                    buffer.ReadInt();       // ignore second number
                 mTakeProfitValue =  buffer.ReadDouble();
                 STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mTakeProfitValue=" + (string)mTakeProfitValue);
                 break;

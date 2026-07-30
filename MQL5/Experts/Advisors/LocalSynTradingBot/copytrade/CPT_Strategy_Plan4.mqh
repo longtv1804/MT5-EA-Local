@@ -118,8 +118,6 @@ public:
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
-                                    buffer.ReadInt();       // ignore plan3
-                                    buffer.ReadBool();      // ignore plan3
                 mStopLost_At_i =    buffer.ReadInt();
                 if (mStopLost_At_i <= 1)
                 {

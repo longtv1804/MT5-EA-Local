@@ -78,11 +78,33 @@ int OnInit()
         }
 
         // set các param khác
-        ByteBuffer buffer;
-        buffer.WriteInt(i_Plan3_StartAtIdx);
-        buffer.WriteBool(i_Plan3_PlaceOldPositions);
-        buffer.WriteInt(i_Plan4_StopLostAtIdx);
-        g_CopyTradeController.SetStrategyParam(buffer);
+        ByteBuffer params;
+        if (i_CopyTradePlan == PLAN_ID_1)
+        {
+            // no param
+        }
+        else if (i_CopyTradePlan == PLAN_ID_2)
+        {
+            // no param
+        }
+        else if (i_CopyTradePlan == PLAN_ID_3)
+        {
+            params.WriteInt(i_Plan3_StartAtIdx);
+            params.WriteBool(i_Plan3_PlaceOldPositions);
+        }
+        else if (i_CopyTradePlan == PLAN_ID_4)
+        {
+            params.WriteInt(i_Plan4_StopLostAtIdx);
+        }
+        else if (i_CopyTradePlan == PLAN_ID_5)
+        {
+            // no param
+        }
+        else
+        {
+            // no param
+        }
+        g_CopyTradeController.SetStrategyParam(params);
 
         // finally: init the timer
         EventSetTimer(1);
