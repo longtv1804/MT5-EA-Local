@@ -172,41 +172,54 @@ public:
 
     static bool DoGetAllPosition(iPosition &resArr[])
     {
+        ArrayResize(resArr, 0);
     #ifdef __MQL5__
-        int total = PositionsTotal();
-        ArrayResize(resArr, total);
-
-        for(int i = 0; i < total; i++)
+        int i = 0;
+        while(true)
         {
             ulong ticket = PositionGetTicket(i);
-            if(PositionSelectByTicket(ticket))
+            if(ticket != 0)
             {
-                resArr[i] = iPosition();
-                resArr[i].position_ticket = ticket;
-                resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
-                ENUM_POSITION_TYPE pos_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-                if (pos_type == POSITION_TYPE_BUY)
+                if (PositionSelectByTicket(ticket))
                 {
-                    resArr[i].position_type = ePOSITION_TYPE_BUY;
-                }
-                else if (pos_type == POSITION_TYPE_SELL)
-                {
-                    resArr[i].position_type = ePOSITION_TYPE_SELL;
+                    ArrayResize(resArr, i + 1);
+                    resArr[i] = iPosition();
+                    resArr[i].position_ticket = ticket;
+                    resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
+                    ENUM_POSITION_TYPE pos_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+                    if (pos_type == POSITION_TYPE_BUY)
+                    {
+                        resArr[i].position_type = ePOSITION_TYPE_BUY;
+                    }
+                    else if (pos_type == POSITION_TYPE_SELL)
+                    {
+                        resArr[i].position_type = ePOSITION_TYPE_SELL;
+                    }
+                    else
+                    {
+                        resArr[i].position_type = ePOSITION_TYPE_UNKNOWN;
+                    }
+                    resArr[i].status          = ePOSITION_STATUS_OPEN;
+                    resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
+                    resArr[i].magic_number    = PositionGetInteger(POSITION_MAGIC);
+                    resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
                 }
                 else
                 {
-                    resArr[i].position_type = ePOSITION_TYPE_UNKNOWN;
+                    LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
+                    return false;
                 }
-                resArr[i].status          = ePOSITION_STATUS_OPEN;
-                resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
-                resArr[i].magic_number    = PositionGetInteger(POSITION_MAGIC);
-                resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
             }
             else
             {
-                LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
-                return false;
+                int total = PositionsTotal();
+                if (total != i)
+                {
+                    LOGE("Potential BUG in get positions:i=" + (string)i + " toal=" + (string)total);
+                }
+                break;
             }
+            i++;
         }
     #else // MQL4
         int total = OrdersTotal();
