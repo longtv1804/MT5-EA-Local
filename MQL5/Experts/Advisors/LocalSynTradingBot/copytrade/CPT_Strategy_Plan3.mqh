@@ -65,12 +65,13 @@ public:
                 // do nothing
             }
             // đạt tới số lượng i: bắt đầu đặt lệnh
-            else if (mServerPositions.Size() == mIdxStartOfStrategy)
+            else
             {
                 mIsOrderTriggered = true;
                 if (mEnablePlaceOldPositions)
                 {
-                    for (int i = 0; i < mIdxStartOfStrategy; i++)
+                    int serverPosNum = mServerPositions.Size();
+                    for (int i = 0; i < serverPosNum; i++)
                     {
                         CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(*(mServerPositions.At(i)));
                     }
@@ -79,11 +80,6 @@ public:
                 {
                     CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
                 }
-            }
-            // số Pos lớn hơn: add position như bình thường
-            else
-            {
-                CPT_Strategy_DefaultPlan::OnServer_NewPositionAdded(newPos);
             }
         }
         else
