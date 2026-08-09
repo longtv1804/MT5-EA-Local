@@ -65,6 +65,16 @@ public:
             return;
         
         mServerPositions.Add(newPos);
+
+        // chỉ vào lệnh sell hoặc buy, ko vào cả 2 cùng lúc
+        if (mEnableBuySellInSameTime == false &&
+            ((newPos.position_type == ePOSITION_TYPE_BUY && CommonDatacenter::s_SellPositionNum > 0) ||
+             (newPos.position_type == ePOSITION_TYPE_SELL && CommonDatacenter::s_BuyPositionNum > 0)))
+        {
+            LOGD("ignore, NOT allow buy/sell in the same time");
+            return;
+        }
+
         if (mStopLostTrigged)
         {
             mSession.AddCopyTradePosition(newPos.position_ticket, 0);
@@ -118,6 +128,7 @@ public:
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
+                SetDefaultStrategyParams(buffer);
                 mStopLost_At_i =    buffer.ReadInt();
                 if (mStopLost_At_i <= 1)
                 {

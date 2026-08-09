@@ -109,6 +109,15 @@ public:
             STRATEGY_LOGE("server-ticket is already in the trading map: " + (string)newPos.position_ticket);
             return;
         }
+        // chỉ vào lệnh sell hoặc buy, ko vào cả 2 cùng lúc
+        if (mEnableBuySellInSameTime == false &&
+            ((newPos.position_type == ePOSITION_TYPE_BUY && CommonDatacenter::s_SellPositionNum > 0) ||
+             (newPos.position_type == ePOSITION_TYPE_SELL && CommonDatacenter::s_BuyPositionNum > 0)))
+        {
+            LOGD("ignore, NOT allow buy/sell in the same time");
+            return;
+        }
+
         CopyTradeReqData reqData = {0};
         reqData.server_ticket = newPos.position_ticket;
         if (newPos.position_type == ePOSITION_TYPE_BUY)
@@ -183,6 +192,7 @@ public:
             case EV_STRATEGY_UPDATE_PARAMS:
             {
                 ByteBuffer buffer(ev.data);
+                SetDefaultStrategyParams(buffer);
                 mTakeProfitValue =  buffer.ReadDouble();
                 STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mTakeProfitValue=" + (string)mTakeProfitValue);
                 break;

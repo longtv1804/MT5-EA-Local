@@ -165,3 +165,9 @@ enum EnumStrategyPlanId {
     PLAN_ID_5 = 5,      /*PLAN-5: Revert Copy trade*/
     PLAN_ID_MAX
 };
+
+enum EnumTakeProfitMode
+{
+    MODE_NORMAL,
+    MODE_FOLLOW_TP_SL
+};

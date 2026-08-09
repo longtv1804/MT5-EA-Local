@@ -60,6 +60,7 @@ public:
     virtual void OnTimer() {}
     virtual bool InitStrategy(int planId) {return true;}
     virtual void SetStrategyParam(ByteBuffer& param) {}
+    virtual void SetTotalStopLost(double sl) {}
 
 /**********************************************************************************
 *

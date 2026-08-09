@@ -18,6 +18,12 @@
 input group "---- Common Setting ----"
 input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
 input double i_Weight = 1.0;                        // trọng số
+input double i_TotalSL = 0;                         // % SL/Equity
+input bool i_BuySellInSametime = true;              // Buy-Sell Cùng lúc
+input EnumTakeProfitMode i_TakeProfitMode = 0;      // Take profit mode
+input double i_TP_Distance = 0;                     // Take profit price distance
+input double i_Sl_Distance = 0;                     // Stop Lost price distance
+
 input group "----- Plan Setting -----"
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
 input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vào lệnh từ Position số
@@ -77,8 +83,15 @@ int OnInit()
             break;
         }
 
+        // Set Total Stoplost
+        g_CopyTradeController.SetTotalStopLost(i_TotalSL);
+
         // set các param khác
         ByteBuffer params;
+        params.WriteBool(i_BuySellInSametime);
+        params.WriteInt(i_TakeProfitMode);
+        params.WriteDouble(i_TP_Distance);
+        params.WriteDouble(i_Sl_Distance);
         if (i_CopyTradePlan == PLAN_ID_1)
         {
             // no param

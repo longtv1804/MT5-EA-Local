@@ -65,6 +65,11 @@ public:
         return m_MyTerminal.InitStrategy(planId);
     }
 
+    void SetTotalStopLost(double sl)
+    {
+        m_MyTerminal.SetTotalStopLost(sl);
+    }
+
     void SetStrategyParam(ByteBuffer &buffer)
     {
         m_MyTerminal.SetStrategyParam(buffer);

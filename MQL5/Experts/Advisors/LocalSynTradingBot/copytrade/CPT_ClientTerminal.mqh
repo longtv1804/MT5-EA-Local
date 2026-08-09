@@ -2,6 +2,7 @@
 #include "../common/Utils.mqh"
 #include "../common/Logging.mqh"
 #include "../common/TradeUtils.mqh"
+#include "../common/CommonDatacenter.mqh"
 #include "../queue/Event.mqh"
 #include "../queue/EventUtils.mqh"
 #include "../lib/PointerList.mqh"
@@ -17,6 +18,9 @@ private:
     int mConnectionSessionId;
     PointerList<CPT_Strategy> mStrategyList;
 
+    double mTotalStoplostInPercent;
+    double mDayStartEquity;
+
     /**********************************************************************************
     *
     *   init/terminate
@@ -30,6 +34,9 @@ public:
         mWeight = weight;
         mConnectionSessionId = 0;
         SetConnectionState(eSERVER_CONN_STATE_UNKNOWN);
+
+        mTotalStoplostInPercent = 0;
+        mDayStartEquity = 0;
     }
 
     virtual ~CPT_ClientTerminal()
@@ -102,6 +109,11 @@ public:
             mStrategyList.Clear();
         }
         return res;
+    }
+
+    void SetTotalStopLost(double sl_percent) override
+    {
+        mTotalStoplostInPercent = sl_percent;
     }
 
     void SetStrategyParam(ByteBuffer& param) override
@@ -419,6 +431,8 @@ private:
         {
             mStrategyList.At(i).OnLocal_PositionAdded(newPos);
         }
+
+        CommonDatacenter::OnPositionChanged(newPos);
     }
 
     void OnPositionClosed(const iPosition& closedPos) override
@@ -427,5 +441,6 @@ private:
         {
             mStrategyList.At(i).OnLocal_PositionClosed(closedPos);
         }
+        CommonDatacenter::OnPositionChanged(closedPos);
     }
 };

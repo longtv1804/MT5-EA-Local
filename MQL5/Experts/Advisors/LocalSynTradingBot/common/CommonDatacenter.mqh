@@ -1,4 +1,5 @@
 #include "Types.mqh"
+#include "Logging.mqh"
 
 class CommonDatacenter
 {
@@ -11,17 +12,55 @@ public:
 	static string sFILE_OUTPUT;
 	static string sFILE_INPUT;
 
-	static bool FEATURE_ENABLE_AUTO_TP_SL;
-	static bool FEATURE_ENABLE_LOCAL_SYN;
-
     static EnumCopyTradeMode s_copyTradeMode;
+
+	static uint s_BuyPositionNum;
+	static uint s_SellPositionNum;
+
+	static void OnPositionChanged(const iPosition& pos)
+	{
+		if (pos.position_type != ePOSITION_TYPE_BUY && pos.position_type != ePOSITION_TYPE_SELL)
+		{
+			LOGE("Wrong position type.");
+			return;
+		}
+		if (pos.status != ePOSITION_STATUS_OPEN && pos.status != ePOSITION_STATUS_CLOSED)
+		{
+			LOGE("Wrong status.");
+			return;
+		}
+
+		if (pos.status == ePOSITION_STATUS_OPEN)
+		{
+			if (pos.position_type == ePOSITION_TYPE_BUY)
+			{
+				s_BuyPositionNum++;
+			}
+			else //if (pos.position_type == ePOSITION_TYPE_SELL)
+			{
+				s_SellPositionNum++;
+			}
+		}
+		else //if (pos.status == ePOSITION_STATUS_CLOSED)
+		{
+			if (pos.position_type == ePOSITION_TYPE_BUY)
+			{
+				s_BuyPositionNum--;
+			}
+			else //if (pos.position_type == ePOSITION_TYPE_SELL)
+			{
+				s_SellPositionNum--;
+			}
+		}
+	}
 };
 
 // Định nghĩa các biến static bên ngoài class
 EnumTerminalType CommonDatacenter::sLOCAL_TERMINAL_TYPE = eTERMINAL_TYPE_UNKNOWN;
 string CommonDatacenter::sFILE_OUTPUT = "";
 string CommonDatacenter::sFILE_INPUT = "";
-bool CommonDatacenter::FEATURE_ENABLE_AUTO_TP_SL = true;
-bool CommonDatacenter::FEATURE_ENABLE_LOCAL_SYN = true;
 
 EnumCopyTradeMode CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
+
+uint CommonDatacenter::s_BuyPositionNum = 0;
+uint CommonDatacenter::s_SellPositionNum = 0;

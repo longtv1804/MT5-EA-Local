@@ -86,4 +86,23 @@ public:
 
         return numerator / denominator;
     }
+
+    static double GetFloatintPnl()
+    {
+        return AccountInfoDouble(ACCOUNT_EQUITY) - AccountInfoDouble(ACCOUNT_BALANCE);
+    }
+
+    static double GetFloatintPnl(const ulong &positions[])
+    {
+        double result = 0.0;
+        int posNum = ArraySize(positions);
+        for (int i = 0; i < posNum; i++)
+        {
+            if (positions[i] != 0 && PositionSelectByTicket(positions[i]))
+            {
+                result += PositionGetDouble(POSITION_PROFIT);
+            }
+        }
+        return result;
+    }
 };
