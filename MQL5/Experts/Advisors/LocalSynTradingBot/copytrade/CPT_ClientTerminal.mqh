@@ -21,6 +21,32 @@ private:
     double mTotalStoplostInPercent;
     double mDayStartEquity;
 
+    void CheckNewDay ()
+    {
+        // giảm thiếu số lượng phải check: chỉ check 60s 1 lần
+        static int checkCount = 0;
+        if (checkCount == 60)
+        {
+            datetime day = StringToTime(TimeToString(TimeCurrent(), TIME_DATE));
+            if (CommonDatacenter::s_today != day)
+            {
+                // update date
+                CommonDatacenter::s_today = day;
+
+                // update start equity
+                double closedPnl = TerminalAPI::GetTodayClosedPNL();
+                double balance = TradeUtils::GetBalance();
+                CommonDatacenter::s_TodayStartEquity = balance - closedPnl;
+                LOGD("new day[" + (string)CommonDatacenter::s_today + " startequity=" + (string)CommonDatacenter::s_TodayStartEquity);
+            }
+            checkCount = 0;
+        }
+        else
+        {
+            checkCount++;
+        }
+    }
+
     /**********************************************************************************
     *
     *   init/terminate
@@ -58,7 +84,10 @@ public:
         double closedPnl = TerminalAPI::GetTodayClosedPNL();
         double balance = TradeUtils::GetBalance();
         CommonDatacenter::s_TodayStartEquity = balance - closedPnl;
-        LOGD("today start of equity = " + (string)CommonDatacenter::s_TodayStartEquity);
+
+        CommonDatacenter::s_today = StringToTime(TimeToString(TimeCurrent(), TIME_DATE));
+
+        LOGD("today[" + (string)CommonDatacenter::s_today + "] startequity = " + (string)CommonDatacenter::s_TodayStartEquity);
         return true;
     }
 
@@ -137,18 +166,12 @@ public:
         // check total SL
         if (mTotalStoplostInPercent != 0)
         {
+            CheckNewDay();
+
             double fpnl = TradeUtils::GetFloatintPnl();
             double closedPnl = TerminalAPI::GetTodayClosedPNL();
             double sumPnl = fpnl + closedPnl;
             double sumPnlPercent = MathAbs(sumPnl) * 100 / CommonDatacenter::s_TodayStartEquity;
-
-            static int count = 0;
-            if (count == 30)
-            {
-                LOGD("fpnl=" + (string)fpnl + " closedPnl=" + (string)closedPnl + " sumPNL=" + (string)sumPnl);
-                count = 0;
-            }
-            count++;
 
             if (sumPnl < 0 && sumPnlPercent >= mTotalStoplostInPercent)
             {

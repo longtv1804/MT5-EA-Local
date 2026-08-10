@@ -14,7 +14,9 @@ public:
 
     static EnumCopyTradeMode s_copyTradeMode;
 
+	static datetime s_today;
 	static double s_TodayStartEquity;
+
 	static uint s_BuyPositionNum;
 	static uint s_SellPositionNum;
 
@@ -63,6 +65,7 @@ string CommonDatacenter::sFILE_INPUT = "";
 
 EnumCopyTradeMode CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
 
+datetime CommonDatacenter::s_today = 0;
 double CommonDatacenter::s_TodayStartEquity = 0;
 uint CommonDatacenter::s_BuyPositionNum = 0;
 uint CommonDatacenter::s_SellPositionNum = 0;
