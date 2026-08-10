@@ -20,14 +20,16 @@ input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
 input double i_Weight = 1.0;                        // trọng số
 input double i_TotalSL = 0;                         // % SL/Equity
 input bool i_BuySellInSametime = true;              // Buy-Sell Cùng lúc
-input EnumTakeProfitMode i_TakeProfitMode = 0;      // Take profit mode
-input double i_TP_Distance = 0;                     // Take profit price distance
-input double i_Sl_Distance = 0;                     // Stop Lost price distance
 
 input group "----- Plan Setting -----"
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
-input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vào lệnh từ Position số
-input bool i_Plan3_PlaceOldPositions = true;        // PLAN3: vào cả các lệnh chưa vào
+
+input int i_Plan3_StartAtIdx = 0;                       // PLAN3: vào lệnh từ Position số
+input bool i_Plan3_PlaceOldPositions = true;            // PLAN3: vào cả các lệnh chưa vào
+input EnumTakeProfitMode i_Plan3_TakeProfitMode = 0;    // PLAN3: Take profit mode
+input double i_Plan3_TP_Distance = 0;                   // PLAN3: Take profit price distance
+input double i_Plan3_Sl_Distance = 0;                   // PLAN3: Stop Lost price distance
+
 input int i_Plan4_StopLostAtIdx = 0;                // PLAN4: StopLost ở lệnh số
 // input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
 // input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
@@ -89,9 +91,6 @@ int OnInit()
         // set các param khác
         ByteBuffer params;
         params.WriteBool(i_BuySellInSametime);
-        params.WriteInt(i_TakeProfitMode);
-        params.WriteDouble(i_TP_Distance);
-        params.WriteDouble(i_Sl_Distance);
         if (i_CopyTradePlan == PLAN_ID_1)
         {
             // no param
@@ -102,8 +101,17 @@ int OnInit()
         }
         else if (i_CopyTradePlan == PLAN_ID_3)
         {
+            if (i_Plan3_TakeProfitMode != 0 && (i_Plan3_TP_Distance == 0 || i_Plan3_Sl_Distance == 0))
+            {
+                isInitOk = false;
+                LOGD("mode AUTO TP-SL but TP=" + (string)i_Plan3_TP_Distance + " SL=" +(string)i_Plan3_Sl_Distance);
+                break;
+            }
             params.WriteInt(i_Plan3_StartAtIdx);
             params.WriteBool(i_Plan3_PlaceOldPositions);
+            params.WriteInt(i_Plan3_TakeProfitMode);
+            params.WriteDouble(i_Plan3_TP_Distance);
+            params.WriteDouble(i_Plan3_Sl_Distance);
         }
         else if (i_CopyTradePlan == PLAN_ID_4)
         {

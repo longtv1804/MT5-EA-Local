@@ -12,6 +12,59 @@ class CPT_Strategy_AfterOrderX : public CPT_Strategy_DefaultPlan
     bool mEnablePlaceOldPositions;
     bool mIsOrderTriggered;
 
+    EnumTakeProfitMode mTakeProfitMode;
+    double mTakeProfitDistance;
+    double mStopLostDistance;
+
+protected:
+    virtual void On_OpendPositionDone(const Event &ev) override
+    {
+        EnumEventState closePosState = (EnumEventState)ev.arg_int_1;
+        if (closePosState == EnumEventState::EVS_WAIITING_SUCCESS)
+        {
+            mSession.AddCopyTradePosition(ev.arg_ulong_1, ev.arg_ulong_2);
+
+            // check closeing mode
+            if (mTakeProfitMode == MODE_FOLLOW_TP_SL)
+            {
+                bool updateDone = false;
+                do {
+                    const iPosition pos = TerminalAPI::DoGetPosition(ev.arg_ulong_2);
+                    if (pos.price_open == 0 || pos.position_type == ePOSITION_TYPE_UNKNOWN)
+                    {
+                        break;
+                    }
+                    double tp = pos.price_open;
+                    double sl = pos.price_open;
+                    if (pos.position_type == ePOSITION_TYPE_BUY)
+                    {
+                        tp += mTakeProfitDistance;
+                        sl -= mStopLostDistance;
+                    }
+                    else    // ePOSITION_TYPE_SELL
+                    {
+                        tp -= mTakeProfitDistance;
+                        sl += mStopLostDistance;
+                    }
+                    updateDone = TerminalAPI::PlaceTP(ev.arg_ulong_2, tp);
+                    if (!updateDone) break;
+
+                    updateDone = TerminalAPI::PlaceSL(ev.arg_ulong_2, sl);
+                } while(false);
+                
+                if (!updateDone)
+                {
+                   STRATEGY_LOGD("place TP-SL failed -> do close position:" + (string)ev.arg_ulong_2);
+                   TerminalAPI::DoClosePosition(ev.arg_ulong_2);
+                }
+            }
+        }
+        else
+        {
+            mSession.AddCopyTradePosition(ev.arg_ulong_1, 0);
+        }
+    }
+
 public:
     CPT_Strategy_AfterOrderX(EnumStrategyPositionType type, double weight)
     : CPT_Strategy_DefaultPlan(type, weight),
@@ -53,7 +106,7 @@ public:
             ((newPos.position_type == ePOSITION_TYPE_BUY && CommonDatacenter::s_SellPositionNum > 0) ||
              (newPos.position_type == ePOSITION_TYPE_SELL && CommonDatacenter::s_BuyPositionNum > 0)))
         {
-            LOGD("ignore, NOT allow buy/sell in the same time");
+           STRATEGY_LOGD("ignore, NOT allow buy/sell in the same time");
             return;
         }
 
@@ -99,7 +152,15 @@ public:
         {
             mIsOrderTriggered = false;
         }
-        CPT_Strategy_DefaultPlan::OnServer_PositionClosed(closedPos);
+
+        if (mTakeProfitMode == MODE_FOLLOW_TP_SL)
+        {
+            // do nothing: đóng lệnh dựa vào TP/SL
+        }
+        else // mode MODE_NORMAL
+        {
+            CPT_Strategy_DefaultPlan::OnServer_PositionClosed(closedPos);
+        }
     }
 
     virtual void HandleEvent(const Event &ev) override
@@ -117,7 +178,13 @@ public:
                 SetDefaultStrategyParams(buffer);
                 mIdxStartOfStrategy = buffer.ReadInt();
                 mEnablePlaceOldPositions = buffer.ReadBool();
-                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS mIdxStartOfStrategy=" + (string)mIdxStartOfStrategy + " mEnablePlaceOldPositions=" + (string)mEnablePlaceOldPositions);
+                mTakeProfitMode     =   (EnumTakeProfitMode)buffer.ReadInt();
+                mTakeProfitDistance =   buffer.ReadDouble();
+                mStopLostDistance   =   buffer.ReadDouble();
+               STRATEGY_LOGD(   ""  + (string)mEnableBuySellInSameTime + " " + (string)mTakeProfitMode + 
+                        " " + (string)mTakeProfitDistance + " " + (string)mStopLostDistance);
+                STRATEGY_LOGD("EV_STRATEGY_UPDATE_PARAMS [" + (string)mIdxStartOfStrategy + ", " + (string)mEnablePlaceOldPositions + ", "
+                                                            + (string)mTakeProfitMode + ", " + (string)mTakeProfitDistance + ", " + (string)mStopLostDistance + "]");
                 break;
             }
             default:

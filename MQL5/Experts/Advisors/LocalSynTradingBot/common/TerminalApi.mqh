@@ -627,4 +627,41 @@ public:
 
         return pnl;
     }
+
+    static bool PlaceSL(ulong ticket, double slprice)
+    {
+        CTrade trade;
+        if(!PositionSelectByTicket(ticket))
+        {
+            StringFormat("UpdateSL failed: PositionSelectByTicket(%I64u), error=%d", ticket, GetLastError());
+            return false;
+        }
+
+        double currentTP = PositionGetDouble(POSITION_TP);
+        if(!trade.PositionModify( ticket, slprice, currentTP))
+        {
+            StringFormat("UpdateSL failed: ticket=%I64u, SL=%.5f, error=%d", ticket, slprice, GetLastError());
+            return false;
+        }
+        return true;
+    }
+
+    static bool PlaceTP(ulong ticket, double tpprice)
+    {
+        CTrade trade;
+        if(!PositionSelectByTicket(ticket))
+        {
+            LOGE(StringFormat("UpdateTP failed: PositionSelectByTicket(%I64u), error=%d", ticket, GetLastError()));
+            return false;
+        }
+
+        double currentSL = PositionGetDouble(POSITION_SL);
+        if(!trade.PositionModify(ticket, currentSL, tpprice))
+        {
+            LOGE(StringFormat("UpdateTP failed: ticket=%I64u, TP=%.5f, error=%d", ticket, tpprice, GetLastError()));
+            return false;
+        }
+
+        return true;
+    }
 };

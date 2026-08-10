@@ -13,18 +13,11 @@ class CPT_Strategy_DefaultPlan : public CPT_Strategy
 {
 protected:
     bool mEnableBuySellInSameTime;
-    EnumTakeProfitMode mTakeProfitMode;
-    double mTakeProfitDistance;
-    double mStopLostDistance;
 
     void SetDefaultStrategyParams (ByteBuffer& params)
     {
         mEnableBuySellInSameTime = params.ReadBool();
-        mTakeProfitMode     =   (EnumTakeProfitMode)params.ReadInt();
-        mTakeProfitDistance =   params.ReadDouble();
-        mStopLostDistance   =   params.ReadDouble();
-        LOGD(   ""  + (string)mEnableBuySellInSameTime + " " + (string)mTakeProfitMode + 
-                " " + (string)mTakeProfitDistance + " " + (string)mStopLostDistance);
+        LOGD("EnableBuySell-sametime = "  + (string)mEnableBuySellInSameTime);
     }
 
     /**********************************************************************************
