@@ -87,6 +87,16 @@ public:
         return numerator / denominator;
     }
 
+    static double GetBalance()
+    {
+        return AccountInfoDouble(ACCOUNT_BALANCE);
+    }
+
+    static double GetEquity()
+    {
+        return AccountInfoDouble(ACCOUNT_EQUITY);
+    }
+
     static double GetFloatintPnl()
     {
         return AccountInfoDouble(ACCOUNT_EQUITY) - AccountInfoDouble(ACCOUNT_BALANCE);

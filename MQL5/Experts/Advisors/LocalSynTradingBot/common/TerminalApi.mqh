@@ -591,4 +591,40 @@ public:
         return isBuy ? Ask : Bid;
     #endif
     }
+
+    static double GetTodayClosedPNL()
+    {
+        datetime now = TimeCurrent();
+
+        // 00:00:00 của ngày hiện tại
+        datetime dayStart = StringToTime(TimeToString(now, TIME_DATE));
+        if(!HistorySelect(dayStart, now))
+        {
+            return 0.0;
+        }
+
+        double pnl = 0.0;
+        int total = HistoryDealsTotal();
+        for(int i = 0; i < total; i++)
+        {
+            ulong dealTicket = HistoryDealGetTicket(i);
+
+            if(dealTicket == 0)
+                continue;
+
+            ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(dealTicket, DEAL_ENTRY);
+
+            // Chỉ lấy deal đóng position
+            if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY)
+            {
+                continue;
+            }
+            double profit = HistoryDealGetDouble(dealTicket, DEAL_PROFIT);
+            double commission = HistoryDealGetDouble(dealTicket, DEAL_COMMISSION);
+            double swap = HistoryDealGetDouble(dealTicket, DEAL_SWAP);
+            pnl += profit + commission + swap;
+        }
+
+        return pnl;
+    }
 };

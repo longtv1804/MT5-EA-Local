@@ -53,6 +53,12 @@ public:
         CPT_LocalTerminal::Init(inOutController);
         m_pInOutManager.InitFilesPath();
         SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
+
+        // init value of startPNL in today
+        double closedPnl = TerminalAPI::GetTodayClosedPNL();
+        double balance = TradeUtils::GetBalance();
+        CommonDatacenter::s_TodayStartEquity = balance - closedPnl;
+        LOGD("today start of equity = " + (string)CommonDatacenter::s_TodayStartEquity);
         return true;
     }
 
@@ -123,6 +129,33 @@ public:
             Event ev = ObtainEvent(EV_STRATEGY_UPDATE_PARAMS, mStrategyList.At(i));
             param.CopyBuffer(ev.data);
             SendEvent(ev);
+        }
+    }
+
+    void OnTimer()
+    {
+        // check total SL
+        if (mTotalStoplostInPercent != 0)
+        {
+            double fpnl = TradeUtils::GetFloatintPnl();
+            double closedPnl = TerminalAPI::GetTodayClosedPNL();
+            double sumPnl = fpnl + closedPnl;
+            double sumPnlPercent = MathAbs(sumPnl) * 100 / CommonDatacenter::s_TodayStartEquity;
+
+            static int count = 0;
+            if (count == 30)
+            {
+                LOGD("fpnl=" + (string)fpnl + " closedPnl=" + (string)closedPnl + " sumPNL=" + (string)sumPnl);
+                count = 0;
+            }
+            count++;
+
+            if (sumPnl < 0 && sumPnlPercent >= mTotalStoplostInPercent)
+            {
+                LOGD("fpnl=" + (string)fpnl + " closedPnl=" + (string)closedPnl + " -> " + (string)sumPnlPercent + "% ==> force STOP");
+                TerminalAPI::DoEndAllPositions();
+                TerminalAPI::DoCloseEA();
+            }
         }
     }
 

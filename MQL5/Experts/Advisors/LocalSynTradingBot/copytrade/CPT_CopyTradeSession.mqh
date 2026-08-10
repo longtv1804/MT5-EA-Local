@@ -222,6 +222,23 @@ public:
         return size;
     }
 
+    int GetLocalPositions(ulong &arr[])
+    {
+        ArrayResize(arr, 0);
+        int size = ArraySize(mTradingMap);
+        int arrIdx = 0;
+        for (int i = 0; i < size; i += 2)
+        {
+            if (mTradingMap[i + 1] != 0)
+            {
+                ArrayResize(arr, arrIdx + 1);
+                arr[arrIdx] = mTradingMap[i + 1];
+                arrIdx += 1;
+            }
+        }
+        return arrIdx;
+    }
+
     /**********************************************************************************
     *
     *  functions for update session by latest data from client/server
