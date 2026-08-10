@@ -369,7 +369,7 @@ public:
     {
     #ifdef __MQL5__
         CTrade trade;
-        trade.SetAsyncMode(true);
+        //trade.SetAsyncMode(true);
         int total = PositionsTotal();
         while (total > 0)
         {
