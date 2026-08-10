@@ -105,6 +105,7 @@ public:
     static double GetFloatintPnl(const ulong &positions[])
     {
         double result = 0.0;
+#ifdef __MQL5__
         int posNum = ArraySize(positions);
         for (int i = 0; i < posNum; i++)
         {
@@ -113,6 +114,30 @@ public:
                 result += PositionGetDouble(POSITION_PROFIT);
             }
         }
+#else
+        int posNum = ArraySize(positions);
+        for (int i = 0; i < posNum; i++)
+        {
+            ulong ticket = positions[i];
+            if (ticket == 0)
+                continue;
+
+            if (!OrderSelect((int)ticket, SELECT_BY_TICKET, MODE_TRADES))
+            {
+                continue;
+            }
+
+            int type = OrderType();
+            // Chỉ tính market orders
+            if (type != OP_BUY && type != OP_SELL)
+            {
+                continue;
+            }
+
+            // Net floating PNL
+            result += OrderProfit() + OrderSwap() + OrderCommission();
+        }
+#endif
         return result;
     }
 };

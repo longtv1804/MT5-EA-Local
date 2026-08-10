@@ -598,12 +598,14 @@ public:
 
         // 00:00:00 của ngày hiện tại
         datetime dayStart = StringToTime(TimeToString(now, TIME_DATE));
-        if(!HistorySelect(dayStart, now))
-        {
-            return 0.0;
-        }
 
         double pnl = 0.0;
+#ifdef __MQL5__
+        if (!HistorySelect(dayStart, now))
+        {
+            LOGE("HistorySelect failed. Error=" + IntegerToString(GetLastError()));
+            return 0.0;
+        }
         int total = HistoryDealsTotal();
         for(int i = 0; i < total; i++)
         {
@@ -624,12 +626,48 @@ public:
             double swap = HistoryDealGetDouble(dealTicket, DEAL_SWAP);
             pnl += profit + commission + swap;
         }
+#else
+        int total = OrdersHistoryTotal();
+        for (int i = 0; i < total; i++)
+        {
+            if (!OrderSelect(i, SELECT_BY_POS, MODE_HISTORY))
+            {
+                continue;
+            }
 
+            int type = OrderType();
+
+            // Chỉ lấy market order
+            if (type != OP_BUY && type != OP_SELL)
+            {
+                continue;
+            }
+
+            datetime closeTime = OrderCloseTime();
+
+            // Không phải order đã đóng
+            if (closeTime <= 0)
+                continue;
+
+            // Chỉ lấy order đóng trong ngày hôm nay
+            if (closeTime < dayStart || closeTime > now)
+            {
+                continue;
+            }
+
+            double profit = OrderProfit();
+            double commission = OrderCommission();
+            double swap = OrderSwap();
+
+            pnl += profit + commission + swap;
+        }
+#endif
         return pnl;
     }
 
     static bool PlaceSL(ulong ticket, double slprice)
     {
+#ifdef __MQL5__
         CTrade trade;
         if(!PositionSelectByTicket(ticket))
         {
@@ -643,11 +681,29 @@ public:
             StringFormat("UpdateSL failed: ticket=%I64u, SL=%.5f, error=%d", ticket, slprice, GetLastError());
             return false;
         }
+#else
+        if (!OrderSelect((int)ticket, SELECT_BY_TICKET, MODE_TRADES))
+        {
+            LOGE(StringFormat("UpdateSL failed: OrderSelect(%I64u), error=%d", ticket, GetLastError()));
+            return false;
+        }
+
+        double openPrice = OrderOpenPrice();
+        double currentTP = OrderTakeProfit();
+        datetime expiration = OrderExpiration();
+
+        if (!OrderModify((int)ticket, openPrice, slprice, currentTP, expiration, clrNONE))
+        {
+            LOGE(StringFormat("UpdateSL failed: ticket=%I64u, SL=%.5f, error=%d", ticket, slprice, GetLastError()));
+            return false;
+        }
+#endif
         return true;
     }
 
     static bool PlaceTP(ulong ticket, double tpprice)
     {
+#ifdef __MQL5__
         CTrade trade;
         if(!PositionSelectByTicket(ticket))
         {
@@ -661,7 +717,24 @@ public:
             LOGE(StringFormat("UpdateTP failed: ticket=%I64u, TP=%.5f, error=%d", ticket, tpprice, GetLastError()));
             return false;
         }
+#else
+        if (!OrderSelect((int)ticket, SELECT_BY_TICKET, MODE_TRADES))
+        {
+            LOGE(StringFormat("UpdateTP failed: OrderSelect(%I64u), error=%d", ticket, GetLastError()));
+            return false;
+        }
 
+        double openPrice = OrderOpenPrice();
+        double currentSL = OrderStopLoss();
+        datetime expiration = OrderExpiration();
+
+        if (!OrderModify((int)ticket, openPrice, currentSL, tpprice, expiration, clrNONE))
+        {
+            LOGE(StringFormat("UpdateTP failed: ticket=%I64u, TP=%.5f, error=%d", ticket, tpprice, GetLastError()));
+
+            return false;
+        }
+#endif
         return true;
     }
 };
