@@ -172,54 +172,41 @@ public:
 
     static bool DoGetAllPosition(iPosition &resArr[])
     {
-        ArrayResize(resArr, 0);
     #ifdef __MQL5__
-        int i = 0;
-        while(true)
+        int total = PositionsTotal();
+        ArrayResize(resArr, total);
+
+        for(int i = 0; i < total; i++)
         {
             ulong ticket = PositionGetTicket(i);
-            if(ticket != 0)
+            if(PositionSelectByTicket(ticket))
             {
-                if (PositionSelectByTicket(ticket))
+                resArr[i] = iPosition();
+                resArr[i].position_ticket = ticket;
+                resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
+                ENUM_POSITION_TYPE pos_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+                if (pos_type == POSITION_TYPE_BUY)
                 {
-                    ArrayResize(resArr, i + 1);
-                    resArr[i] = iPosition();
-                    resArr[i].position_ticket = ticket;
-                    resArr[i].symbol          = PositionGetString(POSITION_SYMBOL);
-                    ENUM_POSITION_TYPE pos_type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
-                    if (pos_type == POSITION_TYPE_BUY)
-                    {
-                        resArr[i].position_type = ePOSITION_TYPE_BUY;
-                    }
-                    else if (pos_type == POSITION_TYPE_SELL)
-                    {
-                        resArr[i].position_type = ePOSITION_TYPE_SELL;
-                    }
-                    else
-                    {
-                        resArr[i].position_type = ePOSITION_TYPE_UNKNOWN;
-                    }
-                    resArr[i].status          = ePOSITION_STATUS_OPEN;
-                    resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
-                    resArr[i].magic_number    = PositionGetInteger(POSITION_MAGIC);
-                    resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
+                    resArr[i].position_type = ePOSITION_TYPE_BUY;
+                }
+                else if (pos_type == POSITION_TYPE_SELL)
+                {
+                    resArr[i].position_type = ePOSITION_TYPE_SELL;
                 }
                 else
                 {
-                    LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
-                    return false;
+                    resArr[i].position_type = ePOSITION_TYPE_UNKNOWN;
                 }
+                resArr[i].status          = ePOSITION_STATUS_OPEN;
+                resArr[i].volume          = PositionGetDouble(POSITION_VOLUME);
+                resArr[i].magic_number    = PositionGetInteger(POSITION_MAGIC);
+                resArr[i].price_open      = PositionGetDouble(POSITION_PRICE_OPEN);
             }
             else
             {
-                int total = PositionsTotal();
-                if (total != i)
-                {
-                    LOGE("Potential BUG in get positions:i=" + (string)i + " toal=" + (string)total);
-                }
-                break;
+                LOGE("Failed to select position by ticket: " + IntegerToString(ticket) + " | Error: " + IntegerToString(GetLastError()));
+                return false;
             }
-            i++;
         }
     #else // MQL4
         int total = OrdersTotal();
@@ -369,7 +356,7 @@ public:
     {
     #ifdef __MQL5__
         CTrade trade;
-        //trade.SetAsyncMode(true);
+        trade.SetAsyncMode(true);
         int total = PositionsTotal();
         while (total > 0)
         {
@@ -590,151 +577,5 @@ public:
         RefreshRates();
         return isBuy ? Ask : Bid;
     #endif
-    }
-
-    static double GetTodayClosedPNL()
-    {
-        datetime now = TimeCurrent();
-
-        // 00:00:00 của ngày hiện tại
-        datetime dayStart = StringToTime(TimeToString(now, TIME_DATE));
-
-        double pnl = 0.0;
-#ifdef __MQL5__
-        if (!HistorySelect(dayStart, now))
-        {
-            LOGE("HistorySelect failed. Error=" + IntegerToString(GetLastError()));
-            return 0.0;
-        }
-        int total = HistoryDealsTotal();
-        for(int i = 0; i < total; i++)
-        {
-            ulong dealTicket = HistoryDealGetTicket(i);
-
-            if(dealTicket == 0)
-                continue;
-
-            ENUM_DEAL_ENTRY entry = (ENUM_DEAL_ENTRY)HistoryDealGetInteger(dealTicket, DEAL_ENTRY);
-
-            // Chỉ lấy deal đóng position
-            if(entry != DEAL_ENTRY_OUT && entry != DEAL_ENTRY_OUT_BY)
-            {
-                continue;
-            }
-            double profit = HistoryDealGetDouble(dealTicket, DEAL_PROFIT);
-            double commission = HistoryDealGetDouble(dealTicket, DEAL_COMMISSION);
-            double swap = HistoryDealGetDouble(dealTicket, DEAL_SWAP);
-            pnl += profit + commission + swap;
-        }
-#else
-        int total = OrdersHistoryTotal();
-        for (int i = 0; i < total; i++)
-        {
-            if (!OrderSelect(i, SELECT_BY_POS, MODE_HISTORY))
-            {
-                continue;
-            }
-
-            int type = OrderType();
-
-            // Chỉ lấy market order
-            if (type != OP_BUY && type != OP_SELL)
-            {
-                continue;
-            }
-
-            datetime closeTime = OrderCloseTime();
-
-            // Không phải order đã đóng
-            if (closeTime <= 0)
-                continue;
-
-            // Chỉ lấy order đóng trong ngày hôm nay
-            if (closeTime < dayStart || closeTime > now)
-            {
-                continue;
-            }
-
-            double profit = OrderProfit();
-            double commission = OrderCommission();
-            double swap = OrderSwap();
-
-            pnl += profit + commission + swap;
-        }
-#endif
-        return pnl;
-    }
-
-    static bool PlaceSL(ulong ticket, double slprice)
-    {
-#ifdef __MQL5__
-        CTrade trade;
-        if(!PositionSelectByTicket(ticket))
-        {
-            StringFormat("UpdateSL failed: PositionSelectByTicket(%I64u), error=%d", ticket, GetLastError());
-            return false;
-        }
-
-        double currentTP = PositionGetDouble(POSITION_TP);
-        if(!trade.PositionModify( ticket, slprice, currentTP))
-        {
-            StringFormat("UpdateSL failed: ticket=%I64u, SL=%.5f, error=%d", ticket, slprice, GetLastError());
-            return false;
-        }
-#else
-        if (!OrderSelect((int)ticket, SELECT_BY_TICKET, MODE_TRADES))
-        {
-            LOGE(StringFormat("UpdateSL failed: OrderSelect(%I64u), error=%d", ticket, GetLastError()));
-            return false;
-        }
-
-        double openPrice = OrderOpenPrice();
-        double currentTP = OrderTakeProfit();
-        datetime expiration = OrderExpiration();
-
-        if (!OrderModify((int)ticket, openPrice, slprice, currentTP, expiration, clrNONE))
-        {
-            LOGE(StringFormat("UpdateSL failed: ticket=%I64u, SL=%.5f, error=%d", ticket, slprice, GetLastError()));
-            return false;
-        }
-#endif
-        return true;
-    }
-
-    static bool PlaceTP(ulong ticket, double tpprice)
-    {
-#ifdef __MQL5__
-        CTrade trade;
-        if(!PositionSelectByTicket(ticket))
-        {
-            LOGE(StringFormat("UpdateTP failed: PositionSelectByTicket(%I64u), error=%d", ticket, GetLastError()));
-            return false;
-        }
-
-        double currentSL = PositionGetDouble(POSITION_SL);
-        if(!trade.PositionModify(ticket, currentSL, tpprice))
-        {
-            LOGE(StringFormat("UpdateTP failed: ticket=%I64u, TP=%.5f, error=%d", ticket, tpprice, GetLastError()));
-            return false;
-        }
-#else
-        if (!OrderSelect((int)ticket, SELECT_BY_TICKET, MODE_TRADES))
-        {
-            LOGE(StringFormat("UpdateTP failed: OrderSelect(%I64u), error=%d", ticket, GetLastError()));
-            return false;
-        }
-
-        double openPrice = OrderOpenPrice();
-        double currentSL = OrderStopLoss();
-        datetime expiration = OrderExpiration();
-
-        if (!OrderModify((int)ticket, openPrice, currentSL, tpprice, expiration, clrNONE))
-        {
-            LOGE(StringFormat("UpdateTP failed: ticket=%I64u, TP=%.5f, error=%d", ticket, tpprice, GetLastError()));
-
-            return false;
-        }
-#endif
-        return true;
     }
 };

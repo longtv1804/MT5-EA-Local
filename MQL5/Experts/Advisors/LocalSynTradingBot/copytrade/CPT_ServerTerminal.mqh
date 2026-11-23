@@ -33,7 +33,7 @@ public:
     *       2, server -> server: chỉ init khi ko có pos nào đang chạy hoặc các pos đều thuộc session cũ
     *       3, unkown -> server: chỉ init khi ko có pos nào.
     */
-    bool Init(CPT_InOutManager* inOutController) override
+    bool Init(CPT_SocketChannel* inOutController) override
     {
         CPT_LocalTerminal::Init(inOutController);
 
@@ -97,8 +97,8 @@ public:
 
         if (res)
         {
-            LOGD("Init CPT_InOutManager...");
-            res = inOutController.Init();
+            LOGD("Init CPT_SocketChannel (SERVER)...");
+            res = inOutController.Open();
         }
         return res;
     }
@@ -125,16 +125,18 @@ public:
     ***********************************************************************************/
     void DoPoll() override
     {
-        // giảm thiểu số lượng check file quá nhiều:
-        // 5s mới check một lần.
-        static int s_pollCount = 0;
+        // accept kết nối mới / đọc dữ liệu / dọn client mất kết nối
+        m_pChannel.Pump();
+
+        // quét danh sách client MỖI lần poll:
+        //   bản file phải quét thư mục mỗi 5 giây (file I/O đắt) nên mới
+        //   có bộ đếm s_pollCount; nay chỉ là đọc mảng trong bộ nhớ -> chạy
+        //   luôn, nhờ vậy client mới nhận được UPDATE ngay sau khi kết nối.
         int i = 0, j = 0;
         bool isExisted = false;
-        if (s_pollCount % 5 == 4)
         {
-            s_pollCount = 0;
             int currList[];
-            int currNumber = m_pInOutManager.GetClientList(currList);
+            int currNumber = m_pChannel.GetClientList(currList);
             bool changed = false;
 
             // check new client then noti update for each
@@ -181,7 +183,6 @@ public:
                 mClientNumber = currNumber;
             }
         }
-        s_pollCount += 1;
     }
 
     /**********************************************************************************
@@ -202,7 +203,7 @@ private:
         builder.Set("to_client", (string)client_id);
         builder.Set("curr_positions", currentPositions);
 
-        m_pInOutManager.SendData(builder.Build());
+        m_pChannel.SendData(builder.Build());
     }
 
     void OnPositionAdded(const iPosition& newPos) override
@@ -212,7 +213,7 @@ private:
         builder.Set("session_id", (string)mCopyTradeSessionId);
         builder.Set("position_info", newPos);
         
-        m_pInOutManager.SendData(builder.Build());
+        m_pChannel.SendData(builder.Build());
     }
 
     void OnPositionClosed(const iPosition& closedPos) override
@@ -222,6 +223,6 @@ private:
         builder.Set("session_id", (string)mCopyTradeSessionId);
         builder.Set("position_info", closedPos);
         
-        m_pInOutManager.SendData(builder.Build());
+        m_pChannel.SendData(builder.Build());
     }
 };

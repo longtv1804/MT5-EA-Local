@@ -14,4 +14,7 @@ int MAX_CLIENT = 5;
 string CPT_CLIENT_OUTPUT_FILE_HEADER    = FOLDER_EA_DIR + "\\CPT_client_";
 string CPT_SERVER_OUTPUT_FILE_PATH      = FOLDER_EA_DIR + "\\CPT_server.dat";
 
-string CPT_EA_VER = "CopyTradeEA_v2.2.0";
+// cổng socket nội bộ (127.0.0.1) - dùng khi input Port = 0
+ushort CPT_DEFAULT_SOCKET_PORT = 25000;
+
+string CPT_EA_VER = "CopyTradeEA_v2.1.1";

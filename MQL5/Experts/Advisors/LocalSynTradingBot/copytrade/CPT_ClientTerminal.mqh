@@ -2,7 +2,6 @@
 #include "../common/Utils.mqh"
 #include "../common/Logging.mqh"
 #include "../common/TradeUtils.mqh"
-#include "../common/CommonDatacenter.mqh"
 #include "../queue/Event.mqh"
 #include "../queue/EventUtils.mqh"
 #include "../lib/PointerList.mqh"
@@ -18,35 +17,6 @@ private:
     int mConnectionSessionId;
     PointerList<CPT_Strategy> mStrategyList;
 
-    double mTotalStoplostInPercent;
-    double mDayStartEquity;
-
-    void CheckNewDay ()
-    {
-        // giảm thiếu số lượng phải check: chỉ check 60s 1 lần
-        static int checkCount = 0;
-        if (checkCount == 60)
-        {
-            datetime day = StringToTime(TimeToString(TimeCurrent(), TIME_DATE));
-            if (CommonDatacenter::s_today != day)
-            {
-                // update date
-                CommonDatacenter::s_today = day;
-
-                // update start equity
-                double closedPnl = TerminalAPI::GetTodayClosedPNL();
-                double balance = TradeUtils::GetBalance();
-                CommonDatacenter::s_TodayStartEquity = balance - closedPnl;
-                LOGD("new day[" + (string)CommonDatacenter::s_today + " startequity=" + (string)CommonDatacenter::s_TodayStartEquity);
-            }
-            checkCount = 0;
-        }
-        else
-        {
-            checkCount++;
-        }
-    }
-
     /**********************************************************************************
     *
     *   init/terminate
@@ -60,9 +30,6 @@ public:
         mWeight = weight;
         mConnectionSessionId = 0;
         SetConnectionState(eSERVER_CONN_STATE_UNKNOWN);
-
-        mTotalStoplostInPercent = 0;
-        mDayStartEquity = 0;
     }
 
     virtual ~CPT_ClientTerminal()
@@ -74,20 +41,11 @@ public:
         mStrategyList.Clear();
     }
 
-    bool Init(CPT_InOutManager* inOutController) override
+    bool Init(CPT_SocketChannel* inOutController) override
     {
         CPT_LocalTerminal::Init(inOutController);
-        m_pInOutManager.InitFilesPath();
+        m_pChannel.InitChannel();
         SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
-
-        // init value of startPNL in today
-        double closedPnl = TerminalAPI::GetTodayClosedPNL();
-        double balance = TradeUtils::GetBalance();
-        CommonDatacenter::s_TodayStartEquity = balance - closedPnl;
-
-        CommonDatacenter::s_today = StringToTime(TimeToString(TimeCurrent(), TIME_DATE));
-
-        LOGD("today[" + (string)CommonDatacenter::s_today + "] startequity = " + (string)CommonDatacenter::s_TodayStartEquity);
         return true;
     }
 
@@ -146,11 +104,6 @@ public:
         return res;
     }
 
-    void SetTotalStopLost(double sl_percent) override
-    {
-        mTotalStoplostInPercent = sl_percent;
-    }
-
     void SetStrategyParam(ByteBuffer& param) override
     {
         for (int i = 0; i < mStrategyList.Size(); i++)
@@ -158,27 +111,6 @@ public:
             Event ev = ObtainEvent(EV_STRATEGY_UPDATE_PARAMS, mStrategyList.At(i));
             param.CopyBuffer(ev.data);
             SendEvent(ev);
-        }
-    }
-
-    void OnTimer()
-    {
-        // check total SL
-        if (mTotalStoplostInPercent != 0)
-        {
-            CheckNewDay();
-
-            double fpnl = TradeUtils::GetFloatintPnl();
-            double closedPnl = TerminalAPI::GetTodayClosedPNL();
-            double sumPnl = fpnl + closedPnl;
-            double sumPnlPercent = MathAbs(sumPnl) * 100 / CommonDatacenter::s_TodayStartEquity;
-
-            if (sumPnl < 0 && sumPnlPercent >= mTotalStoplostInPercent)
-            {
-                LOGD("fpnl=" + (string)fpnl + " closedPnl=" + (string)closedPnl + " -> " + (string)sumPnlPercent + "% ==> force STOP");
-                TerminalAPI::DoEndAllPositions();
-                TerminalAPI::DoCloseEA();
-            }
         }
     }
 
@@ -202,8 +134,8 @@ private:
     enum EnumServerConnectionState
     {
         eSERVER_CONN_STATE_UNKNOWN,                 // state ban đầu
-        eSERVER_CONN_STATE_DISCONNECTED,            // state mà connected chuyển về nếu detect mất file
-        eSERVER_CONN_STATE_CONNECTING,              // phát hiện file -> bắt đầu kết nối
+        eSERVER_CONN_STATE_DISCONNECTED,            // mất kết nối server -> connect lại
+        eSERVER_CONN_STATE_CONNECTING,              // đã kết nối socket -> chờ bản tin UPDATE đầu tiên
         eSERVER_CONN_STATE_CONNECTED                // trao đổi thông tin
     };
     EnumServerConnectionState m_state;
@@ -235,25 +167,24 @@ private:
     ***********************************************************************************/
 private:
     /*
-    *   khi server bị tắt đột ngội thì client remove các file output đi.
+    *   khi server bị tắt đột ngột thì client đóng kết nối socket.
     *   để khi server lên lại, thì quá trình connect sẽ dc chạy lại
     */
     void Connected_OnServerDisconnection()
     {
-        m_pInOutManager.Terminate();
+        m_pChannel.Close();
         SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
     }
 
     /*
-    *   detect ra input file của server dc tạo
-    *       + Seek to end of inputfile để đảm bảo chỉ đọc các cmd từ lúc kết nối
-    *       + bắt đầu tạo input file của mình.
+    *   detect ra server đang lắng nghe
+    *       + SkipStaleData: bỏ dữ liệu cũ, chỉ xử lý bản tin từ lúc kết nối
+    *       + HELLO (client_id) đã được gửi trong Open()
     */
-    void Disconnected_OnServerInputFileDetected()
+    void Disconnected_OnServerConnected()
     {
-        LOGD("SERVER File is detected.");
-        m_pInOutManager.SeekToEndInputFile();
-        m_pInOutManager.Init();
+        LOGD("SERVER is detected.");
+        m_pChannel.SkipStaleData();
         SetConnectionState(eSERVER_CONN_STATE_CONNECTING);
     }
     
@@ -262,7 +193,7 @@ private:
     */
     void Connecting_OnServerDisconnection()
     {
-        m_pInOutManager.Terminate();
+        m_pChannel.Close();
         SetConnectionState(eSERVER_CONN_STATE_DISCONNECTED);
     }
 
@@ -300,35 +231,34 @@ private:
 
     /**********************************************************************************
     *
-    *  Polling function: đọc file input và chuyển tới hàm xử lý tương ứng
+    *  Polling function: kiểm tra kết nối socket và đọc bản tin từ server
     *
     ***********************************************************************************/
 public:
     void DoPoll() override
     {
-        // bắt đầu polling data
-        bool isInputExisted = m_pInOutManager.CheckInputFile();
         string cmdList[];
         int cmdNum = 0;
         switch (m_state)
         {
             case eSERVER_CONN_STATE_DISCONNECTED:
             {
-                if (isInputExisted == true)
+                // thử kết nối tới server (mỗi giây 1 lần)
+                if (m_pChannel.Open() == true)
                 {
-                    Disconnected_OnServerInputFileDetected();
+                    Disconnected_OnServerConnected();
                 }
                 break;
             }
             case eSERVER_CONN_STATE_CONNECTING:
             {
-                if (isInputExisted == false)
+                if (m_pChannel.IsAlive() == false)
                 {
                     Connecting_OnServerDisconnection();
                 }
                 else
                 {
-                    cmdNum = m_pInOutManager.PollData(cmdList);
+                    cmdNum = m_pChannel.PollData(cmdList);
                     if (cmdNum > 0)
                     {
                         Connecting_HandleServerCommands(cmdList);
@@ -338,15 +268,15 @@ public:
             }
             case eSERVER_CONN_STATE_CONNECTED:
             {
-                // đang connected, ko tìm thấy input file
-                if (isInputExisted == false)
+                // đang connected nhưng mất kết nối socket với server
+                if (m_pChannel.IsAlive() == false)
                 {
                     Connected_OnServerDisconnection();
                 }
                 // đọc cmds khi kết nối vẫn connected
                 else
                 {
-                    cmdNum = m_pInOutManager.PollData(cmdList);
+                    cmdNum = m_pChannel.PollData(cmdList);
                     if (cmdNum > 0)
                     {
                         Connected_HandleServerCommands(cmdList);
@@ -381,7 +311,7 @@ private:
             }
             // chỉ nhận thông tin của server gửi cho client với id chính xác.
             int client_id =  ParseIntValue(cmdStr, "to_client");
-            if (client_id == m_pInOutManager.GetId())
+            if (client_id == m_pChannel.GetId())
             {
                 string PositonArrayStr = ParseJsonValue(cmdStr, "curr_positions");
                 string tradeSymbol = ParseJsonValue(cmdStr, "trade_symbol");
@@ -487,8 +417,6 @@ private:
         {
             mStrategyList.At(i).OnLocal_PositionAdded(newPos);
         }
-
-        CommonDatacenter::OnPositionChanged(newPos);
     }
 
     void OnPositionClosed(const iPosition& closedPos) override
@@ -497,6 +425,5 @@ private:
         {
             mStrategyList.At(i).OnLocal_PositionClosed(closedPos);
         }
-        CommonDatacenter::OnPositionChanged(closedPos);
     }
 };

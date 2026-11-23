@@ -1,11 +1,11 @@
 class CPT_LocalTerminal;
-class CPT_InOutManager;
+class CPT_SocketChannel;
 
 class InstanceHolder
 {
 public:
     static CPT_LocalTerminal*  p_localTerminal;
-    static CPT_InOutManager*   p_InOutMgr;
+    static CPT_SocketChannel*  p_channel;
 
 public:
     static CPT_LocalTerminal* GetLocalTerminal()
@@ -13,10 +13,10 @@ public:
         return p_localTerminal;
     }
 
-    static CPT_InOutManager* GetInOutMgr()
+    static CPT_SocketChannel* GetChannel()
     {
-        return p_InOutMgr;
+        return p_channel;
     }
 };
 CPT_LocalTerminal*  InstanceHolder::p_localTerminal     = NULL;
-CPT_InOutManager*   InstanceHolder::p_InOutMgr          = NULL;
+CPT_SocketChannel*  InstanceHolder::p_channel           = NULL;

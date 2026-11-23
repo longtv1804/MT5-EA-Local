@@ -5,12 +5,13 @@
 #include "../common/Utils.mqh"
 #include "../queue/Handler.mqh"
 #include "../lib/ByteBuffer.mqh"
-#include "CPT_InOutManager.mqh"
+#include "CPT_InOutManager.mqh"     // cơ chế file (không dùng nữa, giữ làm tham chiếu)
+#include "CPT_SocketChannel.mqh"    // kênh trao đổi qua local socket
 
 class CPT_LocalTerminal : public Handler
 {
 protected:
-    CPT_InOutManager *m_pInOutManager;
+    CPT_SocketChannel *m_pChannel;
 
 /**********************************************************************************
 *
@@ -20,14 +21,14 @@ protected:
 public:
     CPT_LocalTerminal() 
     : Handler(),
-    m_pInOutManager(NULL)
+    m_pChannel(NULL)
     {}
 
     ~CPT_LocalTerminal() {}
 
-    virtual bool Init(CPT_InOutManager* inOutController)
+    virtual bool Init(CPT_SocketChannel* channel)
     {
-        m_pInOutManager = inOutController;
+        m_pChannel = channel;
         return true;
     }
 
@@ -60,7 +61,6 @@ public:
     virtual void OnTimer() {}
     virtual bool InitStrategy(int planId) {return true;}
     virtual void SetStrategyParam(ByteBuffer& param) {}
-    virtual void SetTotalStopLost(double sl) {}
 
 /**********************************************************************************
 *

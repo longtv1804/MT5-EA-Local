@@ -13,7 +13,7 @@
 class CopyTradeController
 {
     CPT_LocalTerminal* m_MyTerminal;
-    CPT_InOutManager mInOutMgr;
+    CPT_SocketChannel mChannel;
     bool mIsInitSuccessed;
 
 public:
@@ -32,10 +32,13 @@ public:
         }
     }
 
-    bool Init(int terminal_mode, double weight)
+    bool Init(int terminal_mode, double weight, ushort socket_port)
     {
         // init seed number for MathRand()
         MathSrand(GetTickCount());
+
+        // cổng socket nội bộ dùng cho kênh trao đổi
+        mChannel.SetPort(socket_port);
 
         // tạo local terminal instance: server or client
         CommonDatacenter::s_copyTradeMode = eCPT_MODE_UNKNOWN;
@@ -50,12 +53,12 @@ public:
             m_MyTerminal = new CPT_ClientTerminal(weight);
         }
         
-        mIsInitSuccessed = m_MyTerminal.Init(&mInOutMgr);
+        mIsInitSuccessed = m_MyTerminal.Init(&mChannel);
 
         if (mIsInitSuccessed)
         {
             InstanceHolder::p_localTerminal = m_MyTerminal;
-            InstanceHolder::p_InOutMgr = &mInOutMgr;
+            InstanceHolder::p_channel = &mChannel;
         }
         return mIsInitSuccessed;
     }
@@ -63,11 +66,6 @@ public:
     bool SetStrategyPlan(int planId)
     {
         return m_MyTerminal.InitStrategy(planId);
-    }
-
-    void SetTotalStopLost(double sl)
-    {
-        m_MyTerminal.SetTotalStopLost(sl);
     }
 
     void SetStrategyParam(ByteBuffer &buffer)
@@ -83,8 +81,8 @@ public:
             m_MyTerminal.Terminate();
         }
 
-        // luôn luôn xóa file output
-        mInOutMgr.Terminate();
+        // luôn luôn đóng kênh socket
+        mChannel.Close();
     }
 
     void OnTimer()

@@ -3,7 +3,6 @@
 #include "../common/TerminalApi.mqh"
 #include "../common/TradeUtils.mqh"
 #include "../common/Logging.mqh"
-#include "../common/CommonDatacenter.mqh"
 #include "../queue/EventUtils.mqh"
 
 /*
@@ -12,14 +11,6 @@
 class CPT_Strategy_DefaultPlan : public CPT_Strategy
 {
 protected:
-    bool mEnableBuySellInSameTime;
-
-    void SetDefaultStrategyParams (ByteBuffer& params)
-    {
-        mEnableBuySellInSameTime = params.ReadBool();
-        LOGD("EnableBuySell-sametime = "  + (string)mEnableBuySellInSameTime);
-    }
-
     /**********************************************************************************
     *
     *   and functions for handle events
@@ -168,12 +159,6 @@ public:
             case EV_CLOSED_POSITION_DONE:
                 On_ClosePositionDone(ev);
                 break;
-            case EV_STRATEGY_UPDATE_PARAMS:
-            {
-                ByteBuffer buffer(ev.data);
-                SetDefaultStrategyParams(buffer);
-                break;
-            }
             default:
                 STRATEGY_LOGE("Unhandle eventId = " + (string)ev.eventId);
                 break;
@@ -292,17 +277,6 @@ public:
             STRATEGY_LOGE("server-ticket is already in the trading map: " + (string)newPos.position_ticket);
             return;
         }
-
-        // chỉ vào lệnh sell hoặc buy, ko vào cả 2 cùng lúc
-        if (mEnableBuySellInSameTime == false &&
-            ((newPos.position_type == ePOSITION_TYPE_BUY && CommonDatacenter::s_SellPositionNum > 0) ||
-             (newPos.position_type == ePOSITION_TYPE_SELL && CommonDatacenter::s_BuyPositionNum > 0)))
-        {
-            LOGD("ignore, NOT allow buy/sell in the same time");
-            mSession.AddCopyTradePosition(newPos.position_ticket, 0);
-            return;
-        }
-
         CopyTradeReqData reqData = {0};
         reqData.server_ticket = newPos.position_ticket;
         reqData.position_type = newPos.position_type;

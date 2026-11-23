@@ -18,18 +18,13 @@
 input group "---- Common Setting ----"
 input EnumCopyTradeMode i_TerminalMode = 0;         // Copy Mode
 input double i_Weight = 1.0;                        // trọng số
-input double i_TotalSL = 0;                         // % SL/Equity
-input bool i_BuySellInSametime = true;              // Buy-Sell Cùng lúc
-
+input group "----- Socket Setting -----"
+input ushort i_SocketPort = 25000;                  // Cổng socket local (127.0.0.1)
+input int i_PollIntervalMs = 50;                    // Chu kỳ OnTimer poll socket (ms)
 input group "----- Plan Setting -----"
 input EnumStrategyPlanId i_CopyTradePlan = 1;       // plan_id
-
-input int i_Plan3_StartAtIdx = 0;                       // PLAN3: vào lệnh từ Position số
-input bool i_Plan3_PlaceOldPositions = true;            // PLAN3: vào cả các lệnh chưa vào
-input EnumTakeProfitMode i_Plan3_TakeProfitMode = 0;    // PLAN3: Take profit mode
-input double i_Plan3_TP_Distance = 0;                   // PLAN3: Take profit price distance
-input double i_Plan3_Sl_Distance = 0;                   // PLAN3: Stop Lost price distance
-
+input int i_Plan3_StartAtIdx = 0;                   // PLAN3: vào lệnh từ Position số
+input bool i_Plan3_PlaceOldPositions = true;        // PLAN3: vào cả các lệnh chưa vào
 input int i_Plan4_StopLostAtIdx = 0;                // PLAN4: StopLost ở lệnh số
 // input double i_StopLossThreshold = 100.00;          // Giới hạn âm(SL)
 // input double i_TakeProfitThreshold = 200.00;        // Giới hạn TakeProfit
@@ -72,7 +67,7 @@ int OnInit()
     bool isInitOk = false;
     do {
         // init connection and client/server first
-        isInitOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight);
+        isInitOk = g_CopyTradeController.Init(i_TerminalMode, i_Weight, i_SocketPort);
         if (!isInitOk)
         {
             break;
@@ -85,50 +80,26 @@ int OnInit()
             break;
         }
 
-        // Set Total Stoplost
-        g_CopyTradeController.SetTotalStopLost(i_TotalSL);
-
         // set các param khác
-        ByteBuffer params;
-        params.WriteBool(i_BuySellInSametime);
-        if (i_CopyTradePlan == PLAN_ID_1)
-        {
-            // no param
-        }
-        else if (i_CopyTradePlan == PLAN_ID_2)
-        {
-            // no param
-        }
-        else if (i_CopyTradePlan == PLAN_ID_3)
-        {
-            if (i_Plan3_TakeProfitMode != 0 && (i_Plan3_TP_Distance == 0 || i_Plan3_Sl_Distance == 0))
-            {
-                isInitOk = false;
-                LOGD("mode AUTO TP-SL but TP=" + (string)i_Plan3_TP_Distance + " SL=" +(string)i_Plan3_Sl_Distance);
-                break;
-            }
-            params.WriteInt(i_Plan3_StartAtIdx);
-            params.WriteBool(i_Plan3_PlaceOldPositions);
-            params.WriteInt(i_Plan3_TakeProfitMode);
-            params.WriteDouble(i_Plan3_TP_Distance);
-            params.WriteDouble(i_Plan3_Sl_Distance);
-        }
-        else if (i_CopyTradePlan == PLAN_ID_4)
-        {
-            params.WriteInt(i_Plan4_StopLostAtIdx);
-        }
-        else if (i_CopyTradePlan == PLAN_ID_5)
-        {
-            // no param
-        }
-        else
-        {
-            // no param
-        }
-        g_CopyTradeController.SetStrategyParam(params);
+        ByteBuffer buffer;
+        buffer.WriteInt(i_Plan3_StartAtIdx);
+        buffer.WriteBool(i_Plan3_PlaceOldPositions);
+        buffer.WriteInt(i_Plan4_StopLostAtIdx);
+        g_CopyTradeController.SetStrategyParam(buffer);
 
-        // finally: init the timer
-        EventSetTimer(1);
+        // timer tính bằng mili-giây:
+        //   client chỉ đọc socket trong OnTimer -> nếu để 1s thì bản tin
+        //   copy bị trễ tới 1s. Đặt 50ms (tối thiểu 10ms).
+        int pollInterval = i_PollIntervalMs;
+        if (pollInterval < 10)
+        {
+            pollInterval = 10;
+        }
+        if (pollInterval > 5000)
+        {
+            pollInterval = 5000;
+        }
+        EventSetMillisecondTimer((uint)pollInterval);
 
     } while(false);
 

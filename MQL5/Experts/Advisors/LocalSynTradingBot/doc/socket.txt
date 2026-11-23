@@ -1,0 +1,74 @@
+THAY ĐỔI: GIAO TIẾP QUA LOCAL SOCKET (thay cho file .dat)
+=========================================================
+
+Mạng trao đổi dữ liệu giữa SERVER terminal và CLIENT terminal
+trước đây chạy qua file trong Common Data folder
+(MT5-EA-local\CPT_server.dat, CPT_client_*.dat) thì nay chạy
+trên socket TCP nội bộ 127.0.0.1.
+
+    Server : mở cổng lắng nghe (input "Local socket port", mặc định 25000)
+    Client : kết nối tới 127.0.0.1:<port>, gửi HELLO (client_id) ngay khi
+             kết nối, sau đó đọc broadcast của server và lọc theo "to_client"
+
+Cấu trúc:
+
+    lib/WinSocket.mqh            wrapper ws2_32.dll (WSAStartup, socket,
+                                 bind, listen, accept, connect, send, recv)
+    copytrade/CPT_SocketChannel.mqh
+                                 kênh trao đổi: accept/đọc/dọn kết nối,
+                                 đệm nhận, tách bản tin theo dòng '\n',
+                                 HELLO handshake, broadcast
+    copytrade/CPT_InOutManager.mqh
+                                 cơ chế file CŨ - không còn được dùng,
+                                 giữ lại làm tham chiếu / rollback
+    SocketSelfTest.mq5           EA test loopback (listen+connect+send/recv)
+
+Định dạng bản tin không đổi: mỗi bản tin là 1 dòng JSON + '\n'
+(các cmd eCMD_CPT_UPDATE / POS_ADDED / POS_CLOSED giữ nguyên giá trị).
+
+YÊU CẦU CẤU HÌNH TRONG METATRADER 5
+------------------------------------
+1. Tools -> Options -> Expert Advisors -> tick "Allow DLL imports"
+   (với bản build có mục chọn phạm vi DLL thì chọn "Any location",
+    vì ws2_32.dll nằm trong thư mục System32)
+2. Khi gắn EA vào chart, tick "Allow DLL imports" ở tab Common.
+3. Terminal 64-bit (mặc định của MT5).
+
+KIỂM TRA NHANH
+--------------
+Gắn EA "SocketSelfTest" vào 1 chart demo, xem tab Experts/Logs:
+    "SOCKET SELF TEST FINISHED: n PASSED, 0 FAILED"
+là kênh socket chạy đúng. Xoá EA test sau khi xong.
+
+LƯU Ý
+-----
+- Chạy nhiều cặp server/client trên cùng máy -> khai báo port khác nhau
+  cho từng cặp (input "Local socket port").
+- Nếu port đã có server khác đang mở, EA SERVER sẽ báo
+  "SERVER is already existed, close EA!!!" (giống bản file khi
+  CPT_server.dat đã tồn tại).
+- Server phát hiện client mới NGAY ở lần poll kế tiếp (bản file phải
+  chờ tối đa 5s vì quét thư mục); client phát hiện server mất kết nối
+  trong vòng 1 lần poll.
+
+ĐỘ TRỄ COPY (latency)
+---------------------
+Toàn bộ việc đọc socket + xử lý event nằm trong OnTimer, nên chu kỳ
+timer quyết định độ trễ:
+
+    input i_PollIntervalMs = 50     // chu kỳ OnTimer (mili-giây)
+
+- Bản file cũ dùng EventSetTimer(1) -> client đọc bản tin chậm hơn
+  tối đa 1 giây (trung bình ~0.5s) => lệnh copy bị trễ ~1s.
+- Bản socket dùng EventSetMillisecondTimer(50) -> độ trễ đọc bản tin
+  tối đa 50ms.
+
+Đường đi của 1 lệnh copy:
+    server OnTrade (ms) -> send socket (ms) -> client OnTimer đọc
+    (<= i_PollIntervalMs) -> strategy đặt lệnh (ms)
+
+- Không có bước nào khác chờ timer: EventQueue/PendingEventList được
+  xử lý trong chính lần OnTimer đó; timeout của PendingEventList dùng
+  TimeCurrent() (giây) nên không bị ảnh hưởng bởi chu kỳ timer.
+- Timer của MT5 là best-effort: nếu terminal đang bận (đồng bộ dữ liệu,
+  mở chart...) thì lần fire có thể bị trễ thêm vài chục ms.

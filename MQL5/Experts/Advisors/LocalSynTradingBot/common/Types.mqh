@@ -24,6 +24,9 @@ enum EnumCmdId
     eCMD_CPT_POS_ADDED,
     eCMD_CPT_POS_CLOSED,
 
+    // client -> server: thông báo client_id khi vừa kết nối socket
+    eCMD_CPT_HELLO,
+
     // max numbber
     eCMD_MAX
 };
@@ -164,10 +167,4 @@ enum EnumStrategyPlanId {
     PLAN_ID_4 = 4,      /*PLAN-4: StopLost at i'th order*/
     PLAN_ID_5 = 5,      /*PLAN-5: Revert Copy trade*/
     PLAN_ID_MAX
-};
-
-enum EnumTakeProfitMode
-{
-    MODE_NORMAL,
-    MODE_FOLLOW_TP_SL
 };
